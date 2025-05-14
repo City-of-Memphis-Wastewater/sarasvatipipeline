@@ -141,7 +141,7 @@ pyenv install 3.11.9
 ## Use Poetry to run deploy the requirements for this project 
 How to install poetry (https://github.com/python-poetry/poetry)
 ```
-#Remove-Item Alias:curl # Solution to a common PowerShell issue 
+Remove-Item Alias:curl # Solution to a common PowerShell issue 
 curl -sSL https://install.python-poetry.org | python3
 # Alternatively: 
 // pip install poetry
