@@ -65,6 +65,9 @@ The ***projects*** folder is designed to accomodate any custom projects that you
 - Generate a cookiecutter template for building new project directories.
 - Use mulchcli (another ongoing repo) to guide users through setting up secrets.yaml files step-by-step.
 
+# Maintenance Notes:
+- Implement session = requests.Session(), like an adult.
+- daemon_runner.py should use both Maxson and Stiles access. 
 # Rollout, setup, etc.
 It is recommended that you use **pyenv** for setting the Python version and generating a virtual environment, though this is optional. 
 

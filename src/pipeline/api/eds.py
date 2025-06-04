@@ -3,7 +3,9 @@ import json
 import logging
 from urllib3.exceptions import HTTPError 
 from requests.exceptions import RequestException
+from requests import Session
 import sys
+import time
 
 from src.pipeline.calls import make_request, call_ping
 from src.pipeline.env import find_urls
@@ -101,6 +103,8 @@ class EdsClient:
         
         "Initialize the query with a POST request" 
         request_url = api_url + 'trend/tabular'
+
+        time.sleep(4)
         
         data = {
             'period' : {
@@ -126,19 +130,41 @@ class EdsClient:
         data = json.loads(decoded_str)
         pprint(data)
         pprint(f"data={data}")
-        id = data["id"] # query id, to reference an existing process, see page 36 of EDS REST API Python Examples.pdf.
-        pprint(f"id={id}")
-        query = '?id={}'.format(id)
-        #data = {'id': id} # already true
+        request_id = data["id"] # query request_id, to reference an existing process, see page 36 of EDS REST API Python Examples.pdf.
+        pprint(f"request_id={request_id}")
+
+        # Prepare to retrieve tabular trend data 
+        query = '?id={}'.format(request_id) # the API expects 'id', but I use 'request_id' where possible for rigor.
+        #data = {'id': request_id} # already true
         request_url = api_url + 'trend/tabular' + query
         #request_url = api_url + 'events/read' + query
         print(f"request_url = {request_url}")
-        response = make_request(url = request_url, headers=headers, method = "GET") # includes the query id in the url
-        byte_string = response.content
-        print(f"byte_string = {byte_string}")
-        decoded_str = byte_string.decode('utf-8')
-        print(f"Status: {response.status_code}")
-        print(decoded_str[:500])  # Print just a slice
+
+        # Delay request. First check the request_id (AKA request_id) to see status.
+        '''
+        From Emerson Help Desk:
+            For all such requests that return a requestId, 
+            the proper approach is to check the task status, 
+            using the following request periodically:
+            GET /api/v1/requests?id=<requestId>
+            Only once the result is ready should it be retrieved.
+        '''
+        while True:
+            request_status = check_request_status()
+            if request_status != 'EXECUTING':
+                break
+            time.sleep(1)
+        print(f"request_status = {request_status}")
+
+        if request_status == 'SUCCESS':
+            response = make_request(url = request_url, headers=headers, method = "GET") # includes the query request_id in the url
+            byte_string = response.content
+            print(f"byte_string = {byte_string}")
+            decoded_str = byte_string.decode('utf-8')
+            print(f"Status: {response.status_code}")
+            print(decoded_str[:500])  # Print just a slice
+        else:
+            pass
 
     def get_points_export(self,site: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
         "Success"
@@ -219,7 +245,6 @@ def ping():
         if "43084" in url or "43080" in url: # Expected REST or SOAP API ports for the EDS 
             print(f"ping url: {url}")
             call_ping(url)
-
 
 if __name__ == "__main__":
     #demo_eds_save_point_export()

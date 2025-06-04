@@ -25,7 +25,7 @@ def run_live_cycle():
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
-    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(config_obj)
+    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(config_obj) 
     headers_eds_stiles = None
     #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(config_obj)
 
