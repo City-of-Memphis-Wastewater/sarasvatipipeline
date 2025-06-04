@@ -1,10 +1,7 @@
 #env.__main__.py
  
-import os
-import requests
 import yaml
 from src.pipeline.projectmanager import ProjectManager 
-from src.pipeline.projectmanager import establish_default_project
 
 class SecretsYaml:
     def __init__(self, config):

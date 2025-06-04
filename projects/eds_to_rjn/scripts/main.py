@@ -3,6 +3,7 @@ from datetime import datetime
 import csv
 import sys
 from pathlib import Path
+from requests import Session # if you aren'ty using this, you should be
 
 # Add the root project path so that 'src' can be found
 ROOT = Path(__file__).resolve().parents[2]  # pipeline/projects/eds_to_rjn/scripts -> pipeline
@@ -82,6 +83,7 @@ def sketch_andstiles():
             process_sites_and_send(csv_file_path, eds_api, eds_site = eds_site, eds_headers = eds_headers, rjn_base_url=rjn_api.config['url'], rjn_headers=headers_rjn)
 
 
+# Unused as of 04 June 2025
 def get_all_tokens(config_obj):
     print("eds_to_rjn.scripts.main.get_all_tokens()")
     # toml headings
@@ -96,6 +98,7 @@ def get_all_tokens(config_obj):
     print(f"token_rjn = {token_rjn}")
     return eds, rjn, headers_eds_maxson, headers_eds_stiles, headers_rjn
 
+# Used, dameon_runner.py, as of 04 June 2025
 def get_eds_tokens_and_headers_both(config_obj):
     print("eds_to_rjn.scripts.main.get_eds_tokens_and_headers_both()")
     # toml headings
