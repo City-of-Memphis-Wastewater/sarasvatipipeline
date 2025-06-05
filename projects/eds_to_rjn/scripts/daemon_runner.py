@@ -15,7 +15,6 @@ def run_live_cycle():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    #secrets_file_path = project_manager.get_configs_file_path(filename = 'secrets.yaml')
     secrets_file_path = project_manager.get_configs_secrets_file_path()
     config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
     queries_manager = QueriesManager(project_manager)
@@ -40,7 +39,6 @@ def run_hourly_cycle():
     print("Running hourly cycle...")
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    #secrets_file_path = project_manager.get_configs_file_path(filename = 'secrets.yaml')
     secrets_file_path = project_manager.get_configs_secrets_file_path()
     config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
@@ -54,7 +52,6 @@ def run_hourly_cycle_manual():
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     print("project_manager, created.")
-    #secrets_file_path = project_manager.get_configs_file_path(filename = 'secrets.yaml')
     secrets_file_path = project_manager.get_configs_secrets_file_path()
     print("secrets_file_path, established.")
     config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)

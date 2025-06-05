@@ -86,7 +86,6 @@ def ping():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    #secrets_file_path = project_manager.get_configs_file_path(filename = 'secrets.yaml')
     secrets_file_path = project_manager.get_configs_secrets_file_path()
     config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
     url_set = find_urls(config_obj)
