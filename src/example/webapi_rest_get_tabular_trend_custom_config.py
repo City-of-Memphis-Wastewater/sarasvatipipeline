@@ -38,12 +38,10 @@ In Python, variables written in all caps are typically used to represent constan
 Do not reassign these variables.
 '''
 
-
-
-def login():
+def login_to_session():
     session = requests.Session()
 
-    data = {'username': 'admin', 'password': '', 'type': 'script'}
+    data = {'username': 'admin', 'password': '', 'type': 'rest client'} # type can be 'script' or 'rest client', it works the same.
     res = session.post(API_URL + 'login', json=data, verify=False).json()
     session.headers['Authorization'] = 'Bearer ' + res['sessionId']
 
@@ -97,15 +95,17 @@ def get_tabular(session, req_id):
             for idx, samples in enumerate(chunk['items']):
                 results[idx] += samples
 
+def main():
+    session = login_to_session()
+    req_id = create_tabular_request(session)
+    wait_for_request_execution(session, req_id)
+    results = get_tabular(session, req_id)
 
-session = login()
-req_id = create_tabular_request(session)
-wait_for_request_execution(session, req_id)
-results = get_tabular(session, req_id)
+    session.post(API_URL + 'logout', verify=False)
 
-session.post(API_URL + 'logout', verify=False)
-
-for idx, iess in enumerate(POINTS):
-    print('\n{} samples:'.format(iess))
-    for s in results[idx]:
-        print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
+    for idx, iess in enumerate(POINTS):
+        print('\n{} samples:'.format(iess))
+        for s in results[idx]:
+            print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
+if __name__ == "__main__":
+    main()

@@ -15,8 +15,7 @@ def run_live_cycle():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
         queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
@@ -39,8 +38,7 @@ def run_hourly_cycle():
     print("Running hourly cycle...")
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
     aggregator.aggregate_and_send(data_file = project_manager.get_aggregate_dir()+"/live_data.csv",
                                   checkpoint_file = project_manager.get_aggregate_dir()+"/sent_data.csv",
@@ -52,9 +50,8 @@ def run_hourly_cycle_manual():
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     print("project_manager, created.")
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
     print("secrets_file_path, established.")
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     print("config_obj, created.")
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
     print("rjn_api & headers_rjn, created.")

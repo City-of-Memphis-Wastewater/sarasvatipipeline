@@ -3,12 +3,14 @@ import json
 import logging
 from urllib3.exceptions import HTTPError 
 from requests.exceptions import RequestException
-from requests import Session
+import requests
 import sys
+import csv
 import time
 
 from src.pipeline.calls import make_request, call_ping
 from src.pipeline.env import find_urls
+from src.example.webapi_rest_get_tabular_trend_custom_config import get_tabular
 from pprint import pprint
 
 # Configure logging (adjust level as needed)
@@ -98,13 +100,12 @@ class EdsClient:
         
     def get_tabular_trend(self,site: str="Maxson",sid: int=0,iess:str="M100FI.UNIT0@NET0", starttime :int=1744661000,endtime:int=1744661700,shortdesc : str="INF-DEFAULT",headers = None):
         "Based on EDS REST API Python Examples.pdf, pages 36-37."
-        "Failed"
+        
+        '''create_tabular_request '''
         api_url = str(self.config[site]["url"])
         
         "Initialize the query with a POST request" 
         request_url = api_url + 'trend/tabular'
-
-        time.sleep(4)
         
         data = {
             'period' : {
@@ -122,6 +123,36 @@ class EdsClient:
             }
         
         response = make_request(url = request_url, headers=headers, data = data, method="POST")
+        byte_string = response.content
+        decoded_str = byte_string.decode('utf-8')
+        data = json.loads(decoded_str)
+        request_id = data["id"]
+ 
+        response_json = json.loads(response.content.decode('utf-8'))        
+        request_id = response_json["id"]
+        
+        def wait_for_request_execution(headers, req_id, api_url):
+            st = time.time()
+            while True:
+                time.sleep(1)
+                #response = session.get(f'{api_url}requests?id={req_id}', verify=False).json()
+                response = make_request(url = api_url, headers=headers, params = {id:req_id}, method="GET")
+                print(f"dir(response) = {dir(response)}")
+                print(f"response.__dict__ = {response.__dict__}")
+                response_json = json.loads(response.content.decode('utf-8'))        
+                status = response_json[str(req_id)]
+                if status['status'] == 'FAILURE':
+                    raise RuntimeError('request [{}] failed: {}'.format(req_id, status['message']))
+                elif status['status'] == 'SUCCESS':
+                    break
+                elif status['status'] == 'EXECUTING':
+                    print('request [{}] progress: {:.2f}\n'.format(req_id, time.time() - st))
+
+            print('request [{}] executed in: {:.3f} s\n'.format(req_id, time.time() - st))
+
+        wait_for_request_execution(headers, req_id = request_id, api_url = api_url)
+
+        #time.sleep(4)
         if response is None:
             print("Tabular trend request failed: Check your secrets.yaml file URL.")
             sys.exit()
@@ -141,30 +172,12 @@ class EdsClient:
         print(f"request_url = {request_url}")
 
         # Delay request. First check the request_id (AKA request_id) to see status.
-        '''
-        From Emerson Help Desk:
-            For all such requests that return a requestId, 
-            the proper approach is to check the task status, 
-            using the following request periodically:
-            GET /api/v1/requests?id=<requestId>
-            Only once the result is ready should it be retrieved.
-        '''
-        while True:
-            request_status = check_request_status()
-            if request_status != 'EXECUTING':
-                break
-            time.sleep(1)
-        print(f"request_status = {request_status}")
-
-        if request_status == 'SUCCESS':
-            response = make_request(url = request_url, headers=headers, method = "GET") # includes the query request_id in the url
-            byte_string = response.content
-            print(f"byte_string = {byte_string}")
-            decoded_str = byte_string.decode('utf-8')
-            print(f"Status: {response.status_code}")
-            print(decoded_str[:500])  # Print just a slice
-        else:
-            pass
+        response = make_request(url = request_url, headers=headers, method = "GET") # includes the query request_id in the url
+        byte_string = response.content
+        print(f"byte_string = {byte_string}")
+        decoded_str = byte_string.decode('utf-8')
+        print(f"Status: {response.status_code}")
+        print(decoded_str[:500])  # Print just a slice
 
     def get_points_export(self,site: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
         "Success"
@@ -203,15 +216,120 @@ def demo_get_tabular_trend():
     from src.pipeline.api.eds import EdsClient
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     key0 = list(config_obj.keys())[0]
     key00 = list(config_obj[key0].keys())[0] # test whichever key is first in secrets.yaml
     eds = EdsClient(config_obj[key0])
     token_eds, headers_eds = eds.get_token_and_headers(plant_zd=key00)
     eds.get_tabular_trend(site=key00,shortdesc="DEMO",headers = headers_eds)
-    
     print(f"End: demo_show_points_tabular_trend()")
+
+
+def login_to_session(api_url, username, password):
+    session = requests.Session()
+
+    data = {'username': username, 'password': password, 'type': 'script'}
+    res = session.post(api_url + 'login', json=data, verify=False).json()
+    session.headers['Authorization'] = 'Bearer ' + res['sessionId']
+
+    return session
+
+
+def create_tabular_request(session, api_url, starttime, endtime, points):
+    data = {
+        'period': {
+            'from': starttime, # int(datetime(2024, 12, 16, 15).timestamp()),
+            'till': endtime, # int(datetime(2024, 12, 16, 18).timestamp()),
+        },
+        'step': 600,
+        'items': [{
+            'pointId': {'iess': p},
+            'shadePriority': 'DEFAULT',
+            'function': 'AVG'
+        } for p in points],
+    }
+    res = session.post(api_url + 'trend/tabular', json=data, verify=False).json()
+    print(f"res = {res}")
+    #print(f"res.__dict__ = {res.__dict__}")
+    return res['id']
+
+def get_query_point_list(csv_path, unqiue_id):
+    print(f"csv_path = {csv_path}")
+    point_list = list()
+    with open(csv_path, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        
+        for row in reader:
+            #print(f"\trow = {row}")
+            
+            # Skip empty rows (if all values in the row are empty or None)
+            if not any(row.values()):
+                print("Skipping empty row.")
+                continue
+            #print(f"row = {row}")
+            
+            if ('iess' in row.keys() and row['zd']==unqiue_id):
+                # Convert and validate values
+                point = row["iess"]
+                point_list.append(point)
+            else:
+                print("no iess values found in row, skipping")
+    return point_list
+
+def wait_for_request_execution(session, api_url, req_id):
+    st = time.time()
+    while True:
+        time.sleep(1)
+        res = session.get(f'{api_url}requests?id={req_id}', verify=False).json()
+        status = res[str(req_id)]
+        if status['status'] == 'FAILURE':
+            raise RuntimeError('request [{}] failed: {}'.format(req_id, status['message']))
+        elif status['status'] == 'SUCCESS':
+            break
+        elif status['status'] == 'EXECUTING':
+            print('request [{}] progress: {:.2f}\n'.format(req_id, time.time() - st))
+
+    print('request [{}] executed in: {:.3f} s\n'.format(req_id, time.time() - st))
+
+def demo_get_tabular_trend_OvationSuggested():
+    print("Start: demo_show_points_tabular_trend()")
+    from src.pipeline.env import SecretsYaml
+    from src.pipeline.projectmanager import ProjectManager
+    from src.pipeline.queriesmanager import QueriesManager
+    from src.pipeline.api.eds import EdsClient
+    project_name = ProjectManager.identify_default_project()
+    project_manager = ProjectManager(project_name)
+    queries_manager = QueriesManager(project_manager)
+    queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    key0 = list(config_obj.keys())[0]
+    key00 = list(config_obj[key0].keys())[0] # test whichever key is first in secrets.yaml
+    api_url = config_obj[key0][key00]["url"]
+    #eds = EdsClient(config_obj[key0])
+    #token_eds, headers_eds = eds.get_token_and_headers(plant_zd=key00)
+    #eds.get_tabular_trend(site=key00,shortdesc="DEMO",headers = headers_eds)
+    #print(f"End: demo_show_points_tabular_trend()")
+
+    point_list = list()
+    for csv_file_path in queries_file_path_list:
+        point_list.extend(get_query_point_list(csv_file_path, unqiue_id = key00))
+    print(f"point_list = {point_list}")
+
+    session = login_to_session(api_url = api_url ,username = config_obj[key0][key00]["username"], password = config_obj[key0][key00]["password"])
+    
+    starttime = int(datetime(2024, 12, 16, 15).timestamp())
+    endtime = int(datetime(2024, 12, 16, 18).timestamp())
+    
+    request_id = create_tabular_request(session, api_url, starttime, endtime, points=point_list)
+    wait_for_request_execution(session, api_url, request_id)
+    results = get_tabular(session, request_id)
+
+    session.post(api_url + 'logout', verify=False)
+
+    for idx, iess in enumerate(point_list):
+        print('\n{} samples:'.format(iess))
+        for s in results[idx]:
+            print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
 
 def demo_eds_save_point_export():
     print("Start demo_eds_save_point_export()")
@@ -219,8 +337,7 @@ def demo_eds_save_point_export():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     key0 = list(config_obj.keys())[0]
     key00 = list(config_obj[key0].keys())[0]
     eds = EdsClient(config_obj[key0])
@@ -235,8 +352,7 @@ def ping():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_file_path = project_manager.get_configs_secrets_file_path()
-    config_obj = SecretsYaml.load_config(secrets_file_path = secrets_file_path)
+    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     url_set = find_urls(config_obj)
     for url in url_set:
         if "43084" in url or "43080" in url: # Expected REST or SOAP API ports for the EDS 
@@ -252,7 +368,8 @@ if __name__ == "__main__":
     if cmd == "demo-points-export":
         demo_eds_save_point_export()
     elif cmd == "demo-trend":
-        demo_get_tabular_trend()
+        #demo_get_tabular_trend()
+        demo_get_tabular_trend_OvationSuggested()
     elif cmd == "ping":
         ping()
     else:

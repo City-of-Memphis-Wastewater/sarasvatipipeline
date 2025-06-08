@@ -17,6 +17,6 @@ import toml
 # from colletion import defaultdict
 
 class ConfigurationManager:
-    _instance = None # Singleton instance
-    def __
-    ()
+    
+    def __init__(self):
+        self._instance = None

@@ -16,7 +16,7 @@ class ProjectManager:
     SECRETS_YAML_FILE_NAME ='secrets.yaml'
     SECRETS_EXAMPLE_YAML_FILE_NAME ='secrets-example.yaml'
     DEFAULT_PROJECT_TOML_FILE_NAME = 'default-project.toml'
-
+    
     def __init__(self, project_name):
         self.project_name = project_name
         self.base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -119,8 +119,12 @@ class ProjectManager:
         """
         Class method that reads default-project.toml to identify the default-project.
         """
-        # This climbs out of /src/pipeline/ to find the root
-        root_dir = Path(__file__).resolve().parents[2]  # assumes that this fies is two levels below the root
+        # This climbs out of /src/pipeline/ to find the root.
+        # parents[0] → The directory that contains the Python file.
+        # parents[1] → The parent of that directory.
+        # parents[2] → The grandparent directory (which should be the root), if root_pipeline\src\pipeline\
+        # This organization anticipates PyPi packaging.
+        root_dir = Path(__file__).resolve().parents[2]  # This assumes that this python file's directory is two levels below the root. 
         projects_dir = root_dir / cls.PROJECTS_DIR_NAME
         print(f"projects_dir = {projects_dir}")
         default_toml_path = projects_dir / cls.DEFAULT_PROJECT_TOML_FILE_NAME
@@ -132,10 +136,22 @@ class ProjectManager:
             data = toml.load(f)
             print(data)
         try:
-            return data['default-project']['project']
+            return data['default-project']['project'] # This dictates the proper formatting of the TOML file.
         except KeyError as e:
             raise KeyError(f"Missing key in {cls.DEFAULT_PROJECT_TOML_FILE_NAME}: {e}")
-        
+
+def find_project_root():
+    """Recursively search for the project's root directory."""
+    path = Path(__file__).resolve()
+    while path != path.root:
+        if (path / "default-project.toml").exists():  # Change to a relevant marker
+            return path
+        path = path.parent  # Move up one level
+    raise FileNotFoundError("Project root not found!")
+
+def demo_find_project_root():
+    root_dir = find_project_root()
+    print(root_dir)
         
 def establish_default_project():
     project_name = ProjectManager.identify_default_project()
