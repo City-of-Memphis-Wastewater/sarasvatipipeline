@@ -5,8 +5,7 @@ description = "API access for reading from the EDS and writing to https://rjn-cl
 authors = ["George Clayton Bennett <george.bennett@memphistn.gov>"]
 license = "BSD-3"
 readme = "README.md"
-packages = [{ include = "pipeline", from = "src" }]  # Adjusted path
-#packages = [{ include = "pipeline", from = "src/pipeline" }]  # More specific path
+packages = [{ include = "pipeline", from = "src" }] 
 
 
 [tool.poetry.dependencies]
