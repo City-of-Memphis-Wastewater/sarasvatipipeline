@@ -2,6 +2,7 @@
 [default-query]
 #files = ["points.csv"]
 files = ["points-maxson.csv", "points-stiles.csv"]
+use-most-recently-edited-file = true # while true, this will ignore the files variable list and instead use a single list of the most recent files
 
 [default-query-ignore]
 file=["query_24April2025.txt"]

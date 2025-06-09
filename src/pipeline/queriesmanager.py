@@ -1,6 +1,13 @@
 import os
 import toml
 
+'''
+Goal:
+Set up to use the most recent query:
+use-most-recently-edited-file = true # while true, this will ignore the files variable list and instead use a single list of the most recent files
+
+'''
+
 class QueriesManager:
     def __init__(self, project_manager: object):
         if not project_manager:

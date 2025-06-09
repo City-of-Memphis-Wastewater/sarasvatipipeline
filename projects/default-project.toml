@@ -1,2 +1,3 @@
 [default-project]
 project = "eds_to_rjn"
+use-most-recently-edited-directory = true # while true, this will ignore the 'project' variable above and instead the most recently edited project folder. This is to prevent you from having to constantly edit this file to try new things.
