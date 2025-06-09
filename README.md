@@ -184,3 +184,6 @@ poetry run python -m src.pipeline.env
 poetry run python -m src.pipeline.api.eds ping
 poetry run python -m projects.eds_to_rjn.scripts.main
 ```
+
+# References
+PEP621.toml

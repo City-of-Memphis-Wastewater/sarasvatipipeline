@@ -1,12 +1,42 @@
-**/.env
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+myenv/
+
+# Poetry lock files (optional, but recommended to commit poetry.lock)
+# poetry.lock
+
+# Environment variables, secrets, etc.
+.env
 **/secrets.yaml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VS Code settings (optional)
+.vscode/
+
+# Log files
+*.log
 **/daemon_log.txt
+
+# Export files
+**/export_eds_points_all.txt
 **/live_data.csv
 **/sent_data.csv
-**/export_eds_points_all.txt
-**/__pycache__/
+
+# Other
 !projects/
 !src/
-myenv/
 src/defunct/
-.python-version
+*.sqlite3
+dist/
+build/
+*.egg-info/
