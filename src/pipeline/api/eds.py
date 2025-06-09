@@ -276,7 +276,7 @@ def get_query_point_list(csv_path, unqiue_id):
                 print("no iess values found in row, skipping")
     return point_list
 
-def wait_for_request_execution(session, api_url, req_id):
+def wait_for_request_execution_session(session, api_url, req_id):
     st = time.time()
     while True:
         time.sleep(1)
@@ -302,30 +302,30 @@ def demo_get_tabular_trend_OvationSuggested():
     queries_manager = QueriesManager(project_manager)
     queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
     config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    key0 = list(config_obj.keys())[0]
-    key00 = list(config_obj[key0].keys())[0] # test whichever key is first in secrets.yaml
-    api_url = config_obj[key0][key00]["url"]
-    #eds = EdsClient(config_obj[key0])
-    #token_eds, headers_eds = eds.get_token_and_headers(plant_zd=key00)
-    #eds.get_tabular_trend(site=key00,shortdesc="DEMO",headers = headers_eds)
-    #print(f"End: demo_show_points_tabular_trend()")
+
+    #eds = EdsClient(config_obj["eds_apis"]) # this design is defunct - use session 
+    # benefits: more modular, more explicit, less exposed
+    # there can be an EdsClient class, to remember the session instance and to know the necessary methods 
 
     point_list = list()
     for csv_file_path in queries_file_path_list:
-        point_list.extend(get_query_point_list(csv_file_path, unqiue_id = key00))
+        point_list.extend(get_query_point_list(csv_file_path, unqiue_id = "Maxson"))
     print(f"point_list = {point_list}")
 
-    session = login_to_session(api_url = api_url ,username = config_obj[key0][key00]["username"], password = config_obj[key0][key00]["password"])
+    session_maxson = login_to_session(api_url = config_obj["eds_apis"]["Maxson"]["url"] ,username = config_obj["eds_apis"]["Maxson"]["username"], password = config_obj["eds_apis"]["Maxson"]["password"])
+    #session_stiles = login_to_session(api_url = config_obj["eds_apis"]["WWTF"]["url"] ,username = config_obj["eds_apis"]["WWTF"]["username"], password = config_obj["eds_apis"]["WWTF"]["password"])
     
     starttime = int(datetime(2024, 12, 16, 15).timestamp())
     endtime = int(datetime(2024, 12, 16, 18).timestamp())
     
-    request_id = create_tabular_request(session, api_url, starttime, endtime, points=point_list)
-    wait_for_request_execution(session, api_url, request_id)
-    results = get_tabular(session, request_id)
+    request_id = create_tabular_request(session_maxson, config_obj["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
+    wait_for_request_execution_session(session_maxson, config_obj["eds_apis"]["Maxson"]["url"], request_id)
+    results = get_tabular(session_maxson, request_id)
 
-    session.post(api_url + 'logout', verify=False)
+    session_maxson.post(config_obj["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
 
+    #request_id = create_tabular_request(session_stiles, config_obj["eds_apis"]["WWTF"]["url"], starttime, endtime, points=point_list)
+    
     for idx, iess in enumerate(point_list):
         print('\n{} samples:'.format(iess))
         for s in results[idx]:

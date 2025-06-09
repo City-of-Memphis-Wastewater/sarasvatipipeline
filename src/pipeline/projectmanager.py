@@ -4,6 +4,11 @@ import logging
 from pathlib import Path
 import sys
 
+'''
+Goal:
+Implement default-project.toml variable: use-most-recently-edited-directory 
+'''
+
 class ProjectManager:
     # It has been chosen to not make the ProjectManager a singleton if there is to be batch processing.
     
