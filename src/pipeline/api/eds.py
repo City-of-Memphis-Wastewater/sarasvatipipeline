@@ -16,7 +16,6 @@ from pprint import pprint
 # Configure logging (adjust level as needed)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-
 class EdsClient:
     def __init__(self,config):
         self.config = config
@@ -368,8 +367,6 @@ def ping():
             call_ping(url)
 
 if __name__ == "__main__":
-    #demo_eds_save_point_export()
-    #demo_get_tabular_trend()
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "default"
 
