@@ -33,19 +33,19 @@ def sketch_maxson():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
-        queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
+        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
         print(f"Using query file: {queries_file_path_list}")
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
-    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(config_obj)
-    #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(config_obj) # Stiles EDS needs to be configured to allow access on the 43084 port. Compare both servers.
+    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_obj)
+    #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(secrets_obj) # Stiles EDS needs to be configured to allow access on the 43084 port. Compare both servers.
     headers_eds_stiles = None
     try:
-        rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
+        rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
     except:
         rjn_api = None
         headers_rjn = None
@@ -58,19 +58,19 @@ def sketch_andstiles():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
-        queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
+        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
         print(f"Using query file: {queries_file_path_list}")
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
-    eds = EdsClient(config_obj['eds_apis'])
+    eds = EdsClient(secrets_obj['eds_apis'])
     token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
-    eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(config_obj) # Stiles EDS needs to be configured to allow access on the 43084 port. Compare both servers.
+    eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(secrets_obj) # Stiles EDS needs to be configured to allow access on the 43084 port. Compare both servers.
 
-    rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
+    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
     eds_sites = ["Maxson", "WWTF"]
     headers_eds = [headers_eds_maxson, headers_eds_stiles]
     for i,eds_headers in enumerate(headers_eds):
@@ -80,11 +80,11 @@ def sketch_andstiles():
 
 
 # Unused as of 04 June 2025
-def get_all_tokens(config_obj):
+def get_all_tokens(secrets_obj):
     print("eds_to_rjn.scripts.main.get_all_tokens()")
     # toml headings
-    eds = EdsClient(config_obj['eds_apis']) 
-    rjn = RjnClient(config_obj['contractor_apis']['RJN'])
+    eds = EdsClient(secrets_obj['eds_apis']) 
+    rjn = RjnClient(secrets_obj['contractor_apis']['RJN'])
     
     token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
     token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
@@ -95,32 +95,32 @@ def get_all_tokens(config_obj):
     return eds, rjn, headers_eds_maxson, headers_eds_stiles, headers_rjn
 
 # Used, dameon_runner.py, as of 04 June 2025
-def get_eds_tokens_and_headers_both(config_obj):
+def get_eds_tokens_and_headers_both(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_tokens_and_headers_both()")
     # toml headings
-    eds = EdsClient(config_obj['eds_apis'])
+    eds = EdsClient(secrets_obj['eds_apis'])
     token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
     token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
     return eds, headers_eds_maxson, headers_eds_stiles
 
-def get_eds_maxson_token_and_headers(config_obj):
+def get_eds_maxson_token_and_headers(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_maxson_tokens_and_headers()")
     # toml headings
-    eds = EdsClient(config_obj['eds_apis'])
+    eds = EdsClient(secrets_obj['eds_apis'])
     token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
     return eds, headers_eds_maxson
 
-def get_eds_stiles_token_and_headers(config_obj):
+def get_eds_stiles_token_and_headers(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_stiles_tokens_and_headers()")
     # toml headings
-    eds = EdsClient(config_obj['eds_apis'])
+    eds = EdsClient(secrets_obj['eds_apis'])
     token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="WWTP")
     return eds, headers_eds_maxson
 
-def get_rjn_tokens_and_headers(config_obj):
+def get_rjn_tokens_and_headers(secrets_obj):
     print("eds_to_rjn.scripts.main.get_rjn_tokens_and_headers()")
     # toml headings
-    rjn = RjnClient(config_obj['contractor_apis']['RJN'])
+    rjn = RjnClient(secrets_obj['contractor_apis']['RJN'])
     token_rjn, headers_rjn = rjn.get_token_and_headers()
     #print(f"token_rjn = {token_rjn}")
     return rjn, headers_rjn

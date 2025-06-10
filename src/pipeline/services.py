@@ -34,5 +34,5 @@ if __name__ == "__main__":
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
-    query_file_paths = queries_manager.get_query_file_paths() # no args will use whatever is identified in default-queries.toml
+    query_file_paths = queries_manager.get_query_file_paths_list() # no args will use whatever is identified in default-queries.toml
     populate_multiple_generic_points_from_filelist(filelist = query_file_paths)

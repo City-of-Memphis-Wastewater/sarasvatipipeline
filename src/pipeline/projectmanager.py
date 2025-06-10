@@ -17,7 +17,7 @@ class ProjectManager:
     IMPORTS_DIR_NAME = 'imports'
     EXPORTS_DIR_NAME = 'exports'
     SCRIPTS_DIR_NAME = 'scripts'
-    CONFIGS_DIR_NAME ='configs'
+    CONFIGS_DIR_NAME ='secrets'
     SECRETS_YAML_FILE_NAME ='secrets.yaml'
     SECRETS_EXAMPLE_YAML_FILE_NAME ='secrets-example.yaml'
     DEFAULT_PROJECT_TOML_FILE_NAME = 'default-project.toml'
@@ -110,6 +110,7 @@ class ProjectManager:
     def get_queries_file_path(self,filename='points.csv'): # default fallback filename
         # Return the full path to the config file
         #! Migrate this function to the QueryManager class,
+        #if filename is str: # have different behavior is a full path is fed vs just a file name expected in the queries directory
         return os.path.join(self.get_queries_dir(), filename)
 
     def get_projects_dir(self):

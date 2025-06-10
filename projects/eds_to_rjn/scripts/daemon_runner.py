@@ -15,17 +15,17 @@ def run_live_cycle():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
-        queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
+        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
         print(f"Using query file: {queries_file_path_list}")
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
-    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(config_obj) 
+    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_obj) 
     headers_eds_stiles = None
-    #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(config_obj)
+    #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(secrets_obj)
 
     for csv_file_path in queries_file_path_list:
         data = collector.collect_live_values(csv_file_path, eds_api, headers_eds_maxson, headers_eds_stiles)
@@ -38,8 +38,8 @@ def run_hourly_cycle():
     print("Running hourly cycle...")
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
     aggregator.aggregate_and_send(data_file = project_manager.get_aggregate_dir()+"/live_data.csv",
                                   checkpoint_file = project_manager.get_aggregate_dir()+"/sent_data.csv",
                                   rjn_base_url=rjn_api.config['url'],
@@ -51,9 +51,9 @@ def run_hourly_cycle_manual():
     project_manager = ProjectManager(project_name)
     print("project_manager, created.")
     print("secrets_file_path, established.")
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    print("config_obj, created.")
-    rjn_api, headers_rjn = get_rjn_tokens_and_headers(config_obj)
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    print("secrets_obj, created.")
+    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
     print("rjn_api & headers_rjn, created.")
     data_file_manual = str(input("CSV filepath (like /live_data.csv), paste: "))
     aggregator.aggregate_and_send(data_file = data_file_manual,

@@ -16,7 +16,6 @@ from pprint import pprint
 # Configure logging (adjust level as needed)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-
 class EdsClient:
     def __init__(self,config):
         self.config = config
@@ -216,10 +215,10 @@ def demo_get_tabular_trend():
     from src.pipeline.api.eds import EdsClient
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    key0 = list(config_obj.keys())[0]
-    key00 = list(config_obj[key0].keys())[0] # test whichever key is first in secrets.yaml
-    eds = EdsClient(config_obj[key0])
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    key0 = list(secrets_obj.keys())[0]
+    key00 = list(secrets_obj[key0].keys())[0] # test whichever key is first in secrets.yaml
+    eds = EdsClient(secrets_obj[key0])
     token_eds, headers_eds = eds.get_token_and_headers(plant_zd=key00)
     eds.get_tabular_trend(site=key00,shortdesc="DEMO",headers = headers_eds)
     print(f"End: demo_show_points_tabular_trend()")
@@ -268,12 +267,15 @@ def get_query_point_list(csv_path, unqiue_id):
                 continue
             #print(f"row = {row}")
             
-            if ('iess' in row.keys() and row['zd']==unqiue_id):
+            if ('iess' not in row.keys()):
+                print("No iess values found in row, skipping")
+            elif row['zd']!=unqiue_id:
+                print("The unique_id does not match the identifier in the current query CSV row.")
+            else:
                 # Convert and validate values
                 point = row["iess"]
                 point_list.append(point)
-            else:
-                print("no iess values found in row, skipping")
+                
     return point_list
 
 def wait_for_request_execution_session(session, api_url, req_id):
@@ -296,15 +298,15 @@ def demo_get_tabular_trend_OvationSuggested():
     from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
     from src.pipeline.queriesmanager import QueriesManager
-    from src.pipeline.api.eds import EdsClient
+    #from src.pipeline.api.eds import EdsClient
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
-    queries_file_path_list = queries_manager.get_query_file_paths() # use default identified by the default-queries.toml file
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
 
-    #eds = EdsClient(config_obj["eds_apis"]) # this design is defunct - use session 
-    # benefits: more modular, more explicit, less exposed
+    #eds = EdsClient(secrets_obj["eds_apis"]) # this design is defunct - use session 
+    # benefits to axing: more modular, more explicit, less exposed
     # there can be an EdsClient class, to remember the session instance and to know the necessary methods 
 
     point_list = list()
@@ -312,19 +314,24 @@ def demo_get_tabular_trend_OvationSuggested():
         point_list.extend(get_query_point_list(csv_file_path, unqiue_id = "Maxson"))
     print(f"point_list = {point_list}")
 
-    session_maxson = login_to_session(api_url = config_obj["eds_apis"]["Maxson"]["url"] ,username = config_obj["eds_apis"]["Maxson"]["username"], password = config_obj["eds_apis"]["Maxson"]["password"])
-    #session_stiles = login_to_session(api_url = config_obj["eds_apis"]["WWTF"]["url"] ,username = config_obj["eds_apis"]["WWTF"]["username"], password = config_obj["eds_apis"]["WWTF"]["password"])
-    
-    starttime = int(datetime(2024, 12, 16, 15).timestamp())
-    endtime = int(datetime(2024, 12, 16, 18).timestamp())
-    
-    request_id = create_tabular_request(session_maxson, config_obj["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
-    wait_for_request_execution_session(session_maxson, config_obj["eds_apis"]["Maxson"]["url"], request_id)
-    results = get_tabular(session_maxson, request_id)
+    sessions = {}
+    session_maxson = login_to_session(api_url = secrets_obj["eds_apis"]["Maxson"]["url"] ,username = secrets_obj["eds_apis"]["Maxson"]["username"], password = secrets_obj["eds_apis"]["Maxson"]["password"])
+    sessions.update({"Maxson":session_maxson})
+    #session_stiles = login_to_session(api_url = secrets_obj["eds_apis"]["WWTF"]["url"] ,username = secrets_obj["eds_apis"]["WWTF"]["username"], password = secrets_obj["eds_apis"]["WWTF"]["password"])
+    #sessions.update{"WWTF":session_stiles}
+    if True:
+        starttime = int(datetime(2024, 12, 16, 15).timestamp())
+        endtime = int(datetime(2024, 12, 16, 18).timestamp())
+    else:
+        starttime = retrieve_most_recent_recorded_success()
+        endtime = get_now_recent_now_time()
+    request_id = create_tabular_request(sessions["Maxson"], secrets_obj["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
+    wait_for_request_execution_session(sessions["Maxson"], secrets_obj["eds_apis"]["Maxson"]["url"], request_id)
+    results = get_tabular(sessions["Maxson"], request_id)
 
-    session_maxson.post(config_obj["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
+    sessions["Maxson"].post(secrets_obj["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
 
-    #request_id = create_tabular_request(session_stiles, config_obj["eds_apis"]["WWTF"]["url"], starttime, endtime, points=point_list)
+    #request_id = create_tabular_request(session_stiles, secrets_obj["eds_apis"]["WWTF"]["url"], starttime, endtime, points=point_list)
     
     for idx, iess in enumerate(point_list):
         print('\n{} samples:'.format(iess))
@@ -337,10 +344,10 @@ def demo_eds_save_point_export():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    key0 = list(config_obj.keys())[0]
-    key00 = list(config_obj[key0].keys())[0]
-    eds = EdsClient(config_obj[key0])
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    key0 = list(secrets_obj.keys())[0]
+    key00 = list(secrets_obj[key0].keys())[0]
+    eds = EdsClient(secrets_obj[key0])
     token_eds, headers_eds = eds.get_token_and_headers(plant_zd=key00)
     decoded_str = eds.get_points_export(site = key00,headers = headers_eds)
     export_file_path = project_manager.get_exports_file_path(filename = 'export_eds_points_all.txt')
@@ -352,16 +359,14 @@ def ping():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    config_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    url_set = find_urls(config_obj)
+    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    url_set = find_urls(secrets_obj)
     for url in url_set:
         if "43084" in url or "43080" in url: # Expected REST or SOAP API ports for the EDS 
             print(f"ping url: {url}")
             call_ping(url)
 
 if __name__ == "__main__":
-    #demo_eds_save_point_export()
-    #demo_get_tabular_trend()
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "default"
 
