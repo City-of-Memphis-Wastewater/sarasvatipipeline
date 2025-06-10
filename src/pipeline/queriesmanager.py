@@ -14,7 +14,7 @@ class QueriesManager:
             raise ValueError("project_manager must be provided and not None.")
         self.project_manager = project_manager
 
-    def get_query_file_paths(self, filename=None):
+    def get_query_file_paths_list(self, filename=None):
         """
         Returns a list of query CSV file paths:
         - If `filename` is provided, use only that one. Expected source: argparse cli
@@ -64,7 +64,7 @@ def cli_queriesmanager():
 
     try:
         # Get the query file path (either default or user-provided)
-        query_file_path = queries_manager.get_query_file_paths(args.csv_file)
+        query_file_path = queries_manager.get_query_file_paths_list(args.csv_file)
         print(f"Using query file: {query_file_path}")
         # Further processing with the query file...
         

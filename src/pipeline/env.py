@@ -24,7 +24,7 @@ class SecretsYaml:
                 print(f"{key} = {val}")
 
 
-def find_urls0(config, url_set=None):
+def find_urls(config, url_set=None):
     '''determine all values with the key "url" in a config file.'''
     if url_set is None:
         url_set = set()
