@@ -21,18 +21,27 @@ class ProjectManager:
     SECRETS_YAML_FILE_NAME ='secrets.yaml'
     SECRETS_EXAMPLE_YAML_FILE_NAME ='secrets-example.yaml'
     DEFAULT_PROJECT_TOML_FILE_NAME = 'default-project.toml'
+    TIMESTAMPS_JSON_FILE_NAME = 'timestamps_success.json'
     
     def __init__(self, project_name):
         self.project_name = project_name
         self.base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        #self.project_dir = os.path.join(self.base_dir, self.PROJECTS_DIR_NAME, project_name)
         self.project_dir = self.get_project_dir()
         self.exports_dir = self.get_exports_dir()
-        self.create_exports_dir()
         self.imports_dir = self.get_imports_dir()
+        self.queries_dir = self.get_queries_dir()
         self.configs_dir = self.get_configs_dir()
         self.scripts_dir = self.get_scripts_dir()
         self.aggregate_dir = self.get_aggregate_dir()
+
+        if False:
+            self.check_and_create_dirs(list_dirs = [self.project_dir, self.exports_dir, self.imports_dir, self.configs_dir, self.scripts_dir, self.aggregate_dir])
+
+    def get_projects_dir(self):
+        return os.path.join(self.base_dir, self.PROJECTS_DIR_NAME)
+
+    def get_project_dir(self):
+        return os.path.join(self.get_projects_dir(), self.project_name)
 
     def get_exports_dir(self):
         return os.path.join(self.project_dir, self.EXPORTS_DIR_NAME)
@@ -46,21 +55,13 @@ class ProjectManager:
         # This should become defunct once the tabular trend data request is functional 
         return os.path.join(self.exports_dir, 'aggregate')
     
-    def create_exports_dir(self):
-        if not os.path.exists(self.exports_dir):
-            os.makedirs(self.exports_dir)
-
     def get_imports_dir(self):
         return os.path.join(self.project_dir, self.IMPORTS_DIR_NAME)
 
     def get_imports_file_path(self, filename):
         # Return the full path to the export file
         return os.path.join(self.imports_dir, filename)
-
-    def create_imports_dir(self):
-        if not os.path.exists(self.imports_dir):
-            os.makedirs(self.imports_dir)
-
+        
     def get_configs_dir(self):
         return os.path.join(self.project_dir, self.CONFIGS_DIR_NAME)
 
@@ -88,10 +89,6 @@ class ProjectManager:
         elif not os.path.exists(file_path) and not os.path.exists(fallback_file_path):
             raise FileNotFoundError(f"Configuration file {self.SECRETS_YAML_FILE_NAME} nor {self.SECRETS_EXAMPLE_YAML_FILE_NAME} not found in directory '{self.configs_dir}'.")
         return file_path
-    
-    def create_configs_dir(self):
-        if not os.path.exists(self.configs_dir):
-            os.makedirs(self.configs_dir)
 
     def get_scripts_dir(self):
         return os.path.join(self.project_dir, self.SCRIPTS_DIR_NAME)
@@ -100,10 +97,6 @@ class ProjectManager:
         # Return the full path to the config file
         return os.path.join(self.scripts_dir, filename)
     
-    def create_scripts_dir(self):
-        if not os.path.exists(self.scripts_dir):
-            os.makedirs(self.scripts_dir)
-    
     def get_queries_dir(self):
         return os.path.join(self.get_project_dir(), self.QUERIES_DIR_NAME)
     
@@ -111,14 +104,17 @@ class ProjectManager:
         # Return the full path to the config file
         #! Migrate this function to the QueryManager class,
         #if filename is str: # have different behavior is a full path is fed vs just a file name expected in the queries directory
-        return os.path.join(self.get_queries_dir(), filename)
+        return os.path.join(self.get_queries_dir(), filename)    
+    
+    def get_timestamp_success_file_path(self):
+        # Return the full path to the timestamp file
+        file_path = os.path.join(self.get_queries_dir(), self.TIMESTAMPS_JSON_FILE_NAME)
+        return file_path
 
-    def get_projects_dir(self):
-        return os.path.join(self.base_dir, self.PROJECTS_DIR_NAME)
-
-    def get_project_dir(self):
-        return os.path.join(self.get_projects_dir(), self.project_name)
-
+    def check_and_create_dirs(self, list_dirs):
+        for dir in list_dirs:
+            if not os.path.exists(dir):
+                os.makedirs(dir)
     
     @classmethod
     def identify_default_project(cls):
