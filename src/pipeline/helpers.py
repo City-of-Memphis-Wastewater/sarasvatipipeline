@@ -19,3 +19,9 @@ def round_time_to_nearest_five(dt: datetime) -> datetime:
     # Find the largest allowed minute <= current minute
     rounded_minute = max(m for m in allowed_minutes if m <= dt.minute)
     return dt.replace(minute=rounded_minute, second=0, microsecond=0)
+
+def get_now_time():
+    nowtime = datetime.now()
+    nowtime =  int(nowtime.timestamp())
+    return nowtime
+

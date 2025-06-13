@@ -1,5 +1,9 @@
 import os
 import toml
+from datetime import datetime
+import json
+
+from src.pipeline import helpers
 
 '''
 Goal:
@@ -43,6 +47,48 @@ class QueriesManager:
             if not os.path.exists(path):
                 raise FileNotFoundError(f"Query file not found: {path}")
         return paths
+    
+    def load_tracking(self):
+        file_path = self.project_manager.get_timestamp_success_file_path()
+        try:
+            return helpers.load_json(file_path)
+        except FileNotFoundError:
+            return {}
+        
+    def save_tracking(self,data):
+        file_path = self.project_manager.get_timestamp_success_file_path()
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+    
+    def get_most_recent_successful_timestamp(self,unique_id):
+        data = self.load_tracking()
+        if data == {}:
+            # if no stored value is found, assume you will go back one hour
+            from datetime import timedelta
+            delta = int(timedelta(hours = 1).total_seconds())
+            starttime = helpers.get_now_time() - delta 
+        else:
+            # if a stored most-recent value is found, use it as the starttime for your a tabular trend request, etc.
+            starttime_iso = datetime.fromisoformat(data[unique_id]["timestamps"]["last_success"])
+            starttime = int(starttime_iso.timestamp())
+        return starttime
+    
+    def update_success(self,unique_id,success_time=None):
+        data = self.load_tracking()
+        if unique_id not in data:
+            data[unique_id] = {"timestamps": {}}
+        now = success_time or datetime.now().isoformat()
+        data[unique_id]["timestamps"]["last_success"] = now
+        data[unique_id]["timestamps"]["last_attempt"] = now
+        self.save_tracking(data)
+
+    def update_attempt(self,unique_id):
+        data = self.load_tracking()
+        if unique_id not in data:
+            data[unique_id] = {"timestamps": {}}
+        now = datetime.now().isoformat()
+        data[unique_id]["timestamps"]["last_attempt"] = now
+
     
 def cli_queriesmanager():
     import argparse
