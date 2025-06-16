@@ -6,7 +6,7 @@ import sys
 
 '''
 Goal:
-Implement default-project.toml variable: use-most-recently-edited-directory 
+Implement default-project.toml variable: use-most-recently-edited-project-directory 
 '''
 
 class ProjectManager:

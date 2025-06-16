@@ -1,3 +1,3 @@
-zd,ip_address,idcs,iess,sid,shortdesc,rjn_siteid,rjn_entityid,rjn_name
-WWTF,172.19.4.128,I-5005A,I-5005A.UNIT1@NET1,5392,INFLU,eefe228a-39a2-4742-a9e3-c07314544ada,200,Influent
-WWTF,172.19.4.128,FI--405/415,FI-405/415.UNIT1@NET1,3550,EFF,eefe228a-39a2-4742-a9e3-c07314544ada,197,Effluent
+zd,idcs,iess,sid,shortdesc,rjn_siteid,rjn_entityid,rjn_name
+WWTF,I-5005A,I-5005A.UNIT1@NET1,5392,INFLU,eefe228a-39a2-4742-a9e3-c07314544ada,200,Influent
+WWTF,FI--405/415,FI-405/415.UNIT1@NET1,3550,EFF,eefe228a-39a2-4742-a9e3-c07314544ada,197,Effluent

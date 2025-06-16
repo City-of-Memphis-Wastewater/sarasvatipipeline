@@ -1,7 +1,7 @@
 #pipeline.collector.py
 from datetime import datetime
 
-from src.pipeline.helpers import round_time_to_nearest_five
+from src.pipeline.helpers import round_time_to_nearest_five_minutes
 from src.pipeline.api.eds import fetch_eds_data
 
 import csv
@@ -51,7 +51,7 @@ def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stile
                     headers=eds_headers
                 )
                 if value is not None:
-                    rounded_dt = round_time_to_nearest_five(datetime.fromtimestamp(ts))
+                    rounded_dt = round_time_to_nearest_five_minutes(datetime.fromtimestamp(ts))
                     data.append({
                         "timestamp": rounded_dt.isoformat(),
                         "sid": eds_sid,

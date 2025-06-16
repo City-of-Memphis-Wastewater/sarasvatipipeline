@@ -56,8 +56,8 @@ class EdsClient:
 
         return token, headers
 
-    def get_license(self,unique_id:str,headers=None):
-        plant_cfg = self.config[unique_id]
+    def get_license(self,api_id:str,headers=None):
+        plant_cfg = self.config[api_id]
         request_url = plant_cfg['url'] + 'license'
         response = make_request(url = request_url, headers=headers, method = "GET", data = {})
         
@@ -67,16 +67,14 @@ class EdsClient:
     def print_point_info_row(self,point_data, shortdesc):
         print(f'''{shortdesc}, sid:{point_data["sid"]}, iess:{point_data["iess"]}, dt:{datetime.fromtimestamp(point_data["ts"])}, un:{point_data["un"]}. av:{round(point_data["value"],2)}''')
 
-
-    def get_points_live(self,unique_id: str,sid: int,shortdesc : str="",headers = None):
-        "Access live value of point from the EDS, based on zs/unique_id value (i.e. Maxson, WWTF, Server)"
+    def get_points_live(self,api_id: str,sid: int,shortdesc : str="",headers = None):
+        "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
         print(f"\nEdsClient.get_points_live")
-        api_url = str(self.config[unique_id]["url"])
+        api_url = str(self.config[api_id]["url"]) # api_id should only ever refer to the secrets.yaml file key
         request_url = api_url + 'points/query'
         print(f"request_url = {request_url}")
         query = {
             'filters' : [{
-            #'zd' : ['Maxson','WWTF','Server','Default'], # What is the default EDS zd name? 
             'sid': [sid],
             'tg' : [0, 1],
             }],
@@ -99,11 +97,11 @@ class EdsClient:
                     self.print_point_info_row(point_data, shortdesc)
             return points_datas[0]  # You expect exactly one point usually
         
-    def get_tabular_trend(self,unique_id: str="Maxson",sid: int=0,iess:str="M100FI.UNIT0@NET0", starttime :int=1744661000,endtime:int=1744661700,shortdesc : str="INF-DEFAULT",headers = None):
+    def get_tabular_trend(self,api_id: str="Maxson",sid: int=0,iess:str="M100FI.UNIT0@NET0", starttime :int=1744661000,endtime:int=1744661700,shortdesc : str="INF-DEFAULT",headers = None):
         "Based on EDS REST API Python Examples.pdf, pages 36-37."
         
         '''create_tabular_request '''
-        api_url = str(self.config[unique_id]["url"])
+        api_url = str(self.config[api_id]["url"])
         
         "Initialize the query with a POST request" 
         request_url = api_url + 'trend/tabular'
@@ -113,7 +111,7 @@ class EdsClient:
             'from' : starttime,
             'till' : endtime
             },
-            'step' : 1,
+            'step' : 150,
             'items' : [{
             'pointId' : {
             'sid' : sid,
@@ -180,10 +178,10 @@ class EdsClient:
         print(f"Status: {response.status_code}")
         print(decoded_str[:500])  # Print just a slice
 
-    def get_points_export(self,unique_id: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
+    def get_points_export(self,api_id: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
         "Success"
-        api_url = str(self.config[unique_id]["url"])
-        zd = unique_id
+        api_url = str(self.config[api_id]["url"])
+        zd = api_id
         iess = ''
         order = 'iess'
         query = '?zd={}&iess={}&order={}'.format(zd, iess, order)
@@ -202,8 +200,8 @@ class EdsClient:
             for line in lines:
                 f.write(line + "\n")  # Save each line in the text file
 
-def fetch_eds_data(eds_api, unique_id, sid, shortdesc, headers):
-    point_data = eds_api.get_points_live(unique_id=unique_id, sid=sid, shortdesc=shortdesc, headers=headers)
+def fetch_eds_data(eds_api, site, sid, shortdesc, headers):
+    point_data = eds_api.get_points_live(api_id=site, sid=sid, shortdesc=shortdesc, headers=headers)
     if point_data is None:
         raise ValueError(f"No live point returned for SID {sid}")
     ts = point_data["ts"]
@@ -222,7 +220,7 @@ def demo_get_tabular_trend():
     key00 = list(secrets_dict[key0].keys())[0] # test whichever key is first in secrets.yaml
     eds = EdsClient(secrets_dict[key0])
     token_eds, headers_eds = eds.get_token_and_headers(zd=key00)
-    eds.get_tabular_trend(unique_id=key00,shortdesc="DEMO",headers = headers_eds)
+    eds.get_tabular_trend(api_id=key00,shortdesc="DEMO",headers = headers_eds)
     print(f"End: demo_show_points_tabular_trend()")
 
 
@@ -240,7 +238,8 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
             'from': starttime, 
             'till': endtime, # must be of type int, like: int(datetime(YYYY, MM, DD, HH).timestamp()),
         },
-        'step': 600,
+
+        'step': 300,
         'items': [{
             'pointId': {'iess': p},
             'shadePriority': 'DEFAULT',
@@ -251,7 +250,7 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
     print(f"res = {res}")
     return res['id']
 
-def get_query_point_list(csv_path, unique_id):
+def get_query_point_list(csv_path, api_id):
     print(f"csv_path = {csv_path}")
     point_list = list()
     with open(csv_path, newline='') as csvfile:
@@ -265,9 +264,9 @@ def get_query_point_list(csv_path, unique_id):
                 print("Skipping empty row.")
                 continue
             #print(f"row = {row}")
-            if row['zd']!=unique_id:
+            if row['zd']!=api_id:
                 pass
-                #print(f"unique_id {unique_id} =! row['zd'] {row['zd']} in the query CSV row.")
+                #print(f"api_id {api_id} =! row['zd'] {row['zd']} in the query CSV row.")
             else:
                 # Convert and validate values
                 point = row["iess"]
@@ -311,35 +310,20 @@ def demo_get_tabular_trend_OvationSuggested():
         session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
         sessions.update({"WWTF":session_stiles})
     
-    '''
-    session = sessions["Maxson"] # set the current session
-    
-    starttime = queries_manager.get_most_recent_successful_timestamp(unique_id="Maxson")
-    endtime = helpers.get_now_time()
-    #request_id = create_tabular_request(session, secrets_dict["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
-    #wait_for_request_execution_session(session, secrets_dict["eds_apis"]["Maxson"]["url"], request_id)
-    request_id = create_tabular_request(session, session.custom_dict["url"], starttime, endtime, points=point_list)
-    wait_for_request_execution_session(session, session.custom_dict["url"], request_id)
-    results = get_tabular(session, request_id)
-    #session.post(secrets_dict["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
-    session.post(session.custom_dict["url"] + 'logout', verify=False)
-    queries_manager.update_success(unique_id="Maxson")
-    '''
-    
     for key, session in sessions.items():
         # discern which queries to use
         point_list = list()
         for csv_file_path in queries_file_path_list:
-            point_list.extend(get_query_point_list(csv_file_path, unique_id = key))
+            point_list.extend(get_query_point_list(csv_file_path, api_id = key))
         print(f"point_list = {point_list}")
-        
-        starttime = queries_manager.get_most_recent_successful_timestamp(unique_id=key)
+        # discern the time range to use
+        starttime = queries_manager.get_most_recent_successful_timestamp(api_id=key)
         endtime = helpers.get_now_time()
         request_id = create_tabular_request(session, session.custom_dict["url"], starttime, endtime, points=point_list)
         wait_for_request_execution_session(session, session.custom_dict["url"], request_id)
         results = get_tabular(session, request_id)
         session.post(session.custom_dict["url"] + 'logout', verify=False)
-        queries_manager.update_success(unique_id=key)
+        #queries_manager.update_success(api_id=key) # not appropriate here
 
         for idx, iess in enumerate(point_list):
             print('\n{} samples:'.format(iess))
@@ -357,7 +341,7 @@ def demo_eds_save_point_export():
     key00 = list(secrets_dict[key0].keys())[0]
     eds = EdsClient(secrets_dict[key0])
     token_eds, headers_eds = eds.get_token_and_headers(zd=key00)
-    decoded_str = eds.get_points_export(unique_id = key00,headers = headers_eds)
+    decoded_str = eds.get_points_export(api_id = key00,headers = headers_eds)
     export_file_path = project_manager.get_exports_file_path(filename = 'export_eds_points_all.txt')
     eds.save_points_export(decoded_str, export_file_path = export_file_path)
     print(f"Export file will be saved to: {export_file_path}")
@@ -373,14 +357,6 @@ def ping():
         if "43084" in url or "43080" in url: # Expected REST or SOAP API ports for the EDS 
             print(f"ping url: {url}")
             call_ping(url)
-
-    '''
-    custom_list = ["http://127.19.4.127:43084/api/v1", "http://127.19.4.128:43084/api/v1", "http://127.19.4.127:22", "http://127.19.4.128:22"]
-    session = requests.Session()
-    for url in custom_list:
-        #call_ping(url)
-        response = session.get(url, timeout=1, verify = False)
-        print(f"response = {response}")'''
 
 if __name__ == "__main__":
     import sys

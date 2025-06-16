@@ -13,7 +13,7 @@ from src.pipeline.env import SecretsYaml
 from src.pipeline.api.eds import EdsClient
 from src.pipeline.api.rjn import RjnClient
 from src.pipeline.calls import test_connection_to_internet
-from src.pipeline.helpers import round_time_to_nearest_five
+from src.pipeline.helpers import round_time_to_nearest_five_minutes
 from src.pipeline.projectmanager import ProjectManager
 from src.pipeline.queriesmanager import QueriesManager
 from src.pipeline.api.rjn import send_data_to_rjn
@@ -24,7 +24,8 @@ def main():
     sketch_daemon_runner_main()
 
 def sketch_daemon_runner_main():
-    from . import daemon_runner
+    #from . import daemon_runner
+    from projects.eds_to_rjn.scripts import daemon_runner
     daemon_runner.main()
 
 
@@ -67,7 +68,7 @@ def sketch_andstiles():
         print(f"Error: {e}")
 
     eds = EdsClient(secrets_obj['eds_apis'])
-    token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
+    token_eds, headers_eds_stiles = eds.get_token_and_headers(zd="WWTF")
     eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(secrets_obj) # Stiles EDS needs to be configured to allow access on the 43084 port. Compare both servers.
 
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
@@ -78,43 +79,28 @@ def sketch_andstiles():
         for csv_file_path in queries_file_path_list:
             process_sites_and_send(csv_file_path, eds_api, eds_site = eds_site, eds_headers = eds_headers, rjn_base_url=rjn_api.config['url'], rjn_headers=headers_rjn)
 
-
-# Unused as of 04 June 2025
-def get_all_tokens(secrets_obj):
-    print("eds_to_rjn.scripts.main.get_all_tokens()")
-    # toml headings
-    eds = EdsClient(secrets_obj['eds_apis']) 
-    rjn = RjnClient(secrets_obj['contractor_apis']['RJN'])
-    
-    token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
-    token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
-    print(f"token_eds = {token_eds}")
-    #print(f"headers_eds = {headers_eds}")
-    token_rjn, headers_rjn = rjn.get_token_and_headers()
-    print(f"token_rjn = {token_rjn}")
-    return eds, rjn, headers_eds_maxson, headers_eds_stiles, headers_rjn
-
+# all of this can be mitigated with requests.Session()
 # Used, dameon_runner.py, as of 04 June 2025
 def get_eds_tokens_and_headers_both(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_tokens_and_headers_both()")
     # toml headings
-    eds = EdsClient(secrets_obj['eds_apis'])
-    token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
-    token_eds, headers_eds_stiles = eds.get_token_and_headers(plant_zd="WWTF")
-    return eds, headers_eds_maxson, headers_eds_stiles
+    eds_api = EdsClient(secrets_obj['eds_apis']) # eats both Maxson and Stiles
+    token_eds, headers_eds_maxson = eds_api.get_token_and_headers(zd="Maxson")
+    token_eds, headers_eds_stiles = eds_api.get_token_and_headers(zd="WWTF")
+    return eds_api, headers_eds_maxson, headers_eds_stiles
 
 def get_eds_maxson_token_and_headers(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_maxson_tokens_and_headers()")
     # toml headings
     eds = EdsClient(secrets_obj['eds_apis'])
-    token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="Maxson")
+    token_eds, headers_eds_maxson = eds.get_token_and_headers(zd="Maxson")
     return eds, headers_eds_maxson
 
 def get_eds_stiles_token_and_headers(secrets_obj):
     print("eds_to_rjn.scripts.main.get_eds_stiles_tokens_and_headers()")
     # toml headings
     eds = EdsClient(secrets_obj['eds_apis'])
-    token_eds, headers_eds_maxson = eds.get_token_and_headers(plant_zd="WWTP")
+    token_eds, headers_eds_maxson = eds.get_token_and_headers(zd="WWTP")
     return eds, headers_eds_maxson
 
 def get_rjn_tokens_and_headers(secrets_obj):
@@ -128,8 +114,8 @@ def get_rjn_tokens_and_headers(secrets_obj):
 
 def call_eds_stiles_get_points_live(eds, headers_eds_stiles):
     print(f"\neds.get_points_live():")
-    eds.get_points_live(site = "WWTF", sid = 5392,shortdesc = "INFLUENT",headers = headers_eds_stiles) # I-5005A.UNIT1@NET1
-    eds.get_points_live(site = "WWTF", sid = 3550,shortdesc = "EFFLUENT",headers = headers_eds_stiles) # FI-405/415.UNIT1@NET1
+    eds.get_points_live(api_id = "WWTF", sid = 5392,shortdesc = "INFLUENT",headers = headers_eds_stiles) # I-5005A.UNIT1@NET1
+    eds.get_points_live(api_id = "WWTF", sid = 3550,shortdesc = "EFFLUENT",headers = headers_eds_stiles) # FI-405/415.UNIT1@NET1
 
 def process_sites_and_send(csv_path, eds_api, eds_site, eds_headers, rjn_base_url, rjn_headers):
     "Retrieve and send immediately, without intermediate storage"
@@ -188,7 +174,7 @@ def process_sites_and_send(csv_path, eds_api, eds_site, eds_headers, rjn_base_ur
 
                 # Process timestamp
                 dt = datetime.fromtimestamp(ts)
-                rounded_dt = round_time_to_nearest_five(dt)
+                rounded_dt = round_time_to_nearest_five_minutes(dt)
                 timestamp = rounded_dt
                 timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
                 # Send data to RJN
