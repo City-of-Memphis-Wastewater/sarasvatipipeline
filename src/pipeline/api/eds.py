@@ -344,10 +344,9 @@ def demo_get_tabular_trend_OvationSuggested():
     query_array = group_queries_by_api_url(query_array_ungrouped)
     
     for key, session in sessions.items():
-        #point_list = query_array.get(key, [])
-        point_list = [row['iess'] for row in query_array.get(key,[])]
-        print(f"point_list = {point_list}")
         # Discern which queries to use
+        point_list = [row['iess'] for row in query_array.get(key,[])]
+        #print(f"point_list = {point_list}")
 
         # Discern the time range to use
         starttime = queries_manager.get_most_recent_successful_timestamp(api_id=key)
