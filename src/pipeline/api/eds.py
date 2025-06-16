@@ -7,10 +7,10 @@ import requests
 import sys
 import csv
 import time
+from collections import defaultdict
 
 from src.pipeline.calls import make_request, call_ping
 from src.pipeline.env import find_urls
-from src.example.webapi_rest_get_tabular_trend_custom_config import get_tabular
 from src.pipeline import helpers
 from pprint import pprint
 
@@ -96,6 +96,22 @@ class EdsClient:
                 for point_data in points_datas:
                     self.print_point_info_row(point_data, shortdesc)
             return points_datas[0]  # You expect exactly one point usually
+    
+    @staticmethod
+    def get_tabular_mod(session, req_id, point_list):
+        results = [[] for _ in range(len(point_list))]
+        while True:
+            api_url = session.custom_dict['url']
+            response = session.get(f'{api_url}trend/tabular?id={req_id}', verify=False).json()
+            for chunk in response:
+                if chunk['status'] == 'TIMEOUT':
+                    raise RuntimeError('timeout')
+
+                if chunk['status'] == 'LAST':
+                    return results
+
+                for idx, samples in enumerate(chunk['items']):
+                    results[idx] += samples
         
     def get_tabular_trend(self,api_id: str="Maxson",sid: int=0,iess:str="M100FI.UNIT0@NET0", starttime :int=1744661000,endtime:int=1744661700,shortdesc : str="INF-DEFAULT",headers = None):
         "Based on EDS REST API Python Examples.pdf, pages 36-37."
@@ -250,15 +266,29 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
     print(f"res = {res}")
     return res['id']
 
+def load_query_rows_from_csv_files(csv_paths_list):
+    query_array = []
+    for csv_path in csv_paths_list:
+        print(f"csv_path = {csv_path}")
+        with open(csv_path, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                query_array.append(row)
+    return query_array
+
+def group_queries_by_api_url(query_array):
+    query_array_grouped = defaultdict(list)
+    for row in query_array:
+        api_id = row['zd']
+        query_array_grouped[api_id].append(row)
+    return query_array_grouped
+
 def get_query_point_list(csv_path, api_id):
     print(f"csv_path = {csv_path}")
     point_list = list()
     with open(csv_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
-        
         for row in reader:
-            #print(f"\trow = {row}")
-            
             # Skip empty rows (if all values in the row are empty or None)
             if not any(row.values()):
                 print("Skipping empty row.")
@@ -291,17 +321,17 @@ def wait_for_request_execution_session(session, api_url, req_id):
 
 def demo_get_tabular_trend_OvationSuggested():
     print("Start: demo_show_points_tabular_trend()")
+    # typical opening, for discerning the project, the secrets files, the queries, and preparing for sessions.
     from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
     from src.pipeline.queriesmanager import QueriesManager
-    
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
-    queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
+    #queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-
     sessions = {}
+
     session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
@@ -309,21 +339,25 @@ def demo_get_tabular_trend_OvationSuggested():
         session_stiles = login_to_session(api_url = secrets_dict["eds_apis"]["WWTF"]["url"] ,username = secrets_dict["eds_apis"]["WWTF"]["username"], password = secrets_dict["eds_apis"]["WWTF"]["password"])
         session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
         sessions.update({"WWTF":session_stiles})
+
+    query_array_ungrouped = load_query_rows_from_csv_files(queries_manager.get_query_file_paths_list())
+    query_array = group_queries_by_api_url(query_array_ungrouped)
     
     for key, session in sessions.items():
-        # discern which queries to use
-        point_list = list()
-        for csv_file_path in queries_file_path_list:
-            point_list.extend(get_query_point_list(csv_file_path, api_id = key))
+        #point_list = query_array.get(key, [])
+        point_list = [row['iess'] for row in query_array.get(key,[])]
         print(f"point_list = {point_list}")
-        # discern the time range to use
+        # Discern which queries to use
+
+        # Discern the time range to use
         starttime = queries_manager.get_most_recent_successful_timestamp(api_id=key)
         endtime = helpers.get_now_time()
+
         request_id = create_tabular_request(session, session.custom_dict["url"], starttime, endtime, points=point_list)
         wait_for_request_execution_session(session, session.custom_dict["url"], request_id)
-        results = get_tabular(session, request_id)
+        results = EdsClient.get_tabular_mod(session, request_id, point_list)
         session.post(session.custom_dict["url"] + 'logout', verify=False)
-        #queries_manager.update_success(api_id=key) # not appropriate here
+        #queries_manager.update_success(api_id=key) # not appropriate here in demo without successful transmission to 3rd party API
 
         for idx, iess in enumerate(point_list):
             print('\n{} samples:'.format(iess))

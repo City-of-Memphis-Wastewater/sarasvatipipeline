@@ -86,8 +86,12 @@ def ping():
     from src.pipeline.projectmanager import ProjectManager
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    url_set = find_urls(secrets_obj)
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    sessions = {}
+
+    url_set = find_urls(secrets_dict)
     for url in url_set:
         if "rjn" in url.lower():
             print(f"ping url: {url}")

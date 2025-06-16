@@ -3,8 +3,9 @@ import schedule, time
 #import logging
 import datetime
 from ..scripts import collector, storage, aggregator
+from src.pipeline.api.eds import login_to_session, get_query_point_list # actually generalized beyond EDS
 #from src.pipeline.daemon import collector, storage, aggregator
-from .main import get_eds_maxson_token_and_headers, get_rjn_tokens_and_headers, get_eds_tokens_and_headers_both
+from .main import get_eds_maxson_token_and_headers, get_rjn_tokens_and_headers
 from src.pipeline.env import SecretsYaml
 from src.pipeline.projectmanager import ProjectManager
 from src.pipeline.queriesmanager import QueriesManager
@@ -15,20 +16,29 @@ def run_live_cycle():
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
-    try:
-        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
-        print(f"Using query file: {queries_file_path_list}")
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
+    queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
+    sessions = {}
+    session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
+    session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
+    sessions.update({"Maxson":session_maxson})
 
-    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_obj) 
+    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_dict) 
     headers_eds_stiles = None
-    #eds_api, headers_eds_maxson, headers_eds_stiles = get_eds_tokens_and_headers_both(secrets_obj)
+
+    # it would be better to load this into a dataframe
+    point_list = list()
+    for key, session in sessions.items():
+        for csv_file_path in queries_file_path_list:
+            # discern which queries to use
+            point_list.extend(get_query_point_list(csv_file_path, api_id = key))
+    print(f"point_list = {point_list}")
 
     for csv_file_path in queries_file_path_list:
         data = collector.collect_live_values(csv_file_path, eds_api, headers_eds_maxson, headers_eds_stiles)
+        #data = collector.collect_live_values(csv_file_path, session)
+        #data = collector.collect_live_values(point_list, session)
         if len(data)==0:
             print("No data retrieved via collector.collect_live_values(). Skipping storage.store_live_values()")
         else:
@@ -38,8 +48,8 @@ def run_hourly_cycle():
     print("Running hourly cycle...")
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
-    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_dict)
     aggregator.aggregate_and_send(data_file = project_manager.get_aggregate_dir()+"/live_data.csv",
                                   checkpoint_file = project_manager.get_aggregate_dir()+"/sent_data.csv",
                                   rjn_base_url=rjn_api.config['url'],
@@ -51,9 +61,9 @@ def run_hourly_cycle_manual():
     project_manager = ProjectManager(project_name)
     print("project_manager, created.")
     print("secrets_file_path, established.")
-    secrets_obj = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    print("secrets_obj, created.")
-    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_obj)
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    print("secrets_dict, created.")
+    rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_dict)
     print("rjn_api & headers_rjn, created.")
     data_file_manual = str(input("CSV filepath (like /live_data.csv), paste: "))
     aggregator.aggregate_and_send(data_file = data_file_manual,
