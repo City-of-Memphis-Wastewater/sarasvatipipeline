@@ -60,6 +60,7 @@ class EdsClient:
         plant_cfg = self.config[unique_id]
         request_url = plant_cfg['url'] + 'license'
         response = make_request(url = request_url, headers=headers, method = "GET", data = {})
+        
         pprint(response.__dict__)
         return response
 
@@ -231,9 +232,7 @@ def login_to_session(api_url, username, password):
     data = {'username': username, 'password': password, 'type': 'script'}
     res = session.post(api_url + 'login', json=data, verify=False).json()
     session.headers['Authorization'] = 'Bearer ' + res['sessionId']
-
     return session
-
 
 def create_tabular_request(session, api_url, starttime, endtime, points):
     data = {
@@ -296,53 +295,56 @@ def demo_get_tabular_trend_OvationSuggested():
     from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
     from src.pipeline.queriesmanager import QueriesManager
-    #from src.pipeline.api.eds import EdsClient
+    
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
     queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    #pprint(secrets_dict)
-
-    #eds = EdsClient(secrets_dict["eds_apis"]) # this design is defunct - use session 
-    # benefits to axing: more modular, more explicit, less exposed
-    # there can be an EdsClient class, to remember the session instance and to know the necessary methods 
-
-    point_list = list()
-    for csv_file_path in queries_file_path_list:
-        point_list.extend(get_query_point_list(csv_file_path, unique_id = "Maxson"))
-    print(f"point_list = {point_list}")
 
     sessions = {}
     session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
-    # session_stiles = login_to_session(api_url = secrets_dict["eds_apis"]["WWTF"]["url"] ,username = secrets_dict["eds_apis"]["WWTF"]["username"], password = secrets_dict["eds_apis"]["WWTF"]["password"])
-    # session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
-    # sessions.update{"WWTF":session_stiles}
-    session = sessions["Maxson"] # set the current session
     if False:
-        nowtime = datetime.now()
-        endtime =  int(nowtime.timestamp())
-        delta = timedelta(hours = 1)
-        starttime = int((nowtime - delta).timestamp())
-        starttime = int(datetime(2024, 12, 16, 15).timestamp())
-        endtime = int(datetime(2024, 12, 16, 18).timestamp())
-    else:
-        starttime = queries_manager.get_most_recent_successful_timestamp(unique_id="Maxson")
-        endtime = helpers.get_now_time()
-
-    request_id = create_tabular_request(session, secrets_dict["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
-    wait_for_request_execution_session(session, secrets_dict["eds_apis"]["Maxson"]["url"], request_id)
-    results = get_tabular(sessions["Maxson"], request_id)
-    session.post(secrets_dict["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
-    queries_manager.update_success(unique_id="Maxson")
-    #request_id = create_tabular_request(session_stiles, secrets_dict["eds_apis"]["WWTF"]["url"], starttime, endtime, points=point_list)
+        session_stiles = login_to_session(api_url = secrets_dict["eds_apis"]["WWTF"]["url"] ,username = secrets_dict["eds_apis"]["WWTF"]["username"], password = secrets_dict["eds_apis"]["WWTF"]["password"])
+        session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
+        sessions.update({"WWTF":session_stiles})
     
-    for idx, iess in enumerate(point_list):
-        print('\n{} samples:'.format(iess))
-        for s in results[idx]:
-            print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
+    '''
+    session = sessions["Maxson"] # set the current session
+    
+    starttime = queries_manager.get_most_recent_successful_timestamp(unique_id="Maxson")
+    endtime = helpers.get_now_time()
+    #request_id = create_tabular_request(session, secrets_dict["eds_apis"]["Maxson"]["url"], starttime, endtime, points=point_list)
+    #wait_for_request_execution_session(session, secrets_dict["eds_apis"]["Maxson"]["url"], request_id)
+    request_id = create_tabular_request(session, session.custom_dict["url"], starttime, endtime, points=point_list)
+    wait_for_request_execution_session(session, session.custom_dict["url"], request_id)
+    results = get_tabular(session, request_id)
+    #session.post(secrets_dict["eds_apis"]["Maxson"]["url"] + 'logout', verify=False)
+    session.post(session.custom_dict["url"] + 'logout', verify=False)
+    queries_manager.update_success(unique_id="Maxson")
+    '''
+    
+    for key, session in sessions.items():
+        # discern which queries to use
+        point_list = list()
+        for csv_file_path in queries_file_path_list:
+            point_list.extend(get_query_point_list(csv_file_path, unique_id = key))
+        print(f"point_list = {point_list}")
+        
+        starttime = queries_manager.get_most_recent_successful_timestamp(unique_id=key)
+        endtime = helpers.get_now_time()
+        request_id = create_tabular_request(session, session.custom_dict["url"], starttime, endtime, points=point_list)
+        wait_for_request_execution_session(session, session.custom_dict["url"], request_id)
+        results = get_tabular(session, request_id)
+        session.post(session.custom_dict["url"] + 'logout', verify=False)
+        queries_manager.update_success(unique_id=key)
+
+        for idx, iess in enumerate(point_list):
+            print('\n{} samples:'.format(iess))
+            for s in results[idx]:
+                print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
 
 def demo_eds_save_point_export():
     print("Start demo_eds_save_point_export()")
@@ -371,6 +373,14 @@ def ping():
         if "43084" in url or "43080" in url: # Expected REST or SOAP API ports for the EDS 
             print(f"ping url: {url}")
             call_ping(url)
+
+    '''
+    custom_list = ["http://127.19.4.127:43084/api/v1", "http://127.19.4.128:43084/api/v1", "http://127.19.4.127:22", "http://127.19.4.128:22"]
+    session = requests.Session()
+    for url in custom_list:
+        #call_ping(url)
+        response = session.get(url, timeout=1, verify = False)
+        print(f"response = {response}")'''
 
 if __name__ == "__main__":
     import sys

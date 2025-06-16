@@ -9,7 +9,6 @@ from src.pipeline import helpers
 Goal:
 Set up to use the most recent query:
 use-most-recently-edited-file = true # while true, this will ignore the files variable list and instead use a single list of the most recent files
-
 '''
 
 class QueriesManager:
@@ -21,7 +20,7 @@ class QueriesManager:
     def get_query_file_paths_list(self, filename=None):
         """
         Returns a list of query CSV file paths:
-        - If `filename` is provided, use only that one. Expected source: argparse cli
+        - If "filename" is provided, use only that one. Expected source: argparse cli
         - Else, try to read default-queries.toml for a list.
         - Else, fallback to ['points.csv']
         """
@@ -74,6 +73,8 @@ class QueriesManager:
         return starttime
     
     def update_success(self,unique_id,success_time=None):
+        # This should be called when data is definitely transmitted to the target API. 
+        # A confirmation algorithm might be in order, like calling back the data and checking it against the original.
         data = self.load_tracking()
         if unique_id not in data:
             data[unique_id] = {"timestamps": {}}
@@ -88,7 +89,6 @@ class QueriesManager:
             data[unique_id] = {"timestamps": {}}
         now = datetime.now().isoformat()
         data[unique_id]["timestamps"]["last_attempt"] = now
-
     
 def cli_queriesmanager():
     import argparse
