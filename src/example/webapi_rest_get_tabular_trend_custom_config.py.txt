@@ -45,7 +45,9 @@ def login_to_session():
     data = {'username': 'admin', 'password': '', 'type': 'rest client'} # type can be 'script' or 'rest client', it works the same.
     res = session.post(API_URL + 'login', json=data, verify=False).json()
     session.headers['Authorization'] = 'Bearer ' + res['sessionId']
+
     return session
+
 
 def create_tabular_request(session):
     data = {

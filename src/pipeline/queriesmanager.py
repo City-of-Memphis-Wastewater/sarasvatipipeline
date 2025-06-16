@@ -8,8 +8,7 @@ from src.pipeline import helpers
 '''
 Goal:
 Set up to use the most recent query:
-use-most-recently-edited-file = true # while true, this will ignore the files variable list and instead use a single list of the most recent files
-
+use-most-recently-edited-query-file = true # while true, this will ignore the files variable list and instead use a single list of the most recent files
 '''
 
 class QueriesManager:
@@ -21,7 +20,7 @@ class QueriesManager:
     def get_query_file_paths_list(self, filename=None):
         """
         Returns a list of query CSV file paths:
-        - If `filename` is provided, use only that one. Expected source: argparse cli
+        - If "filename" is provided, use only that one. Expected source: argparse cli
         - Else, try to read default-queries.toml for a list.
         - Else, fallback to ['points.csv']
         """
@@ -60,35 +59,36 @@ class QueriesManager:
         with open(file_path, 'w') as f:
             json.dump(data, f, indent=2)
     
-    def get_most_recent_successful_timestamp(self,unique_id):
+    def get_most_recent_successful_timestamp(self,api_id):
         data = self.load_tracking()
         if data == {}:
             # if no stored value is found, assume you will go back one hour
             from datetime import timedelta
-            delta = int(timedelta(hours = 1).total_seconds())
+            delta = int(helpers.round_time_to_nearest_five_minutes(timedelta(hours = 1).total_seconds()))
             starttime = helpers.get_now_time() - delta 
         else:
             # if a stored most-recent value is found, use it as the starttime for your a tabular trend request, etc.
-            starttime_iso = datetime.fromisoformat(data[unique_id]["timestamps"]["last_success"])
-            starttime = int(starttime_iso.timestamp())
+            starttime = helpers.round_time_to_nearest_five_minutes(datetime.fromisoformat(data[api_id]["timestamps"]["last_success"]))
+            starttime = int(starttime.timestamp())
         return starttime
     
-    def update_success(self,unique_id,success_time=None):
+    def update_success(self,api_id,success_time=None):
+        # This should be called when data is definitely transmitted to the target API. 
+        # A confirmation algorithm might be in order, like calling back the data and checking it against the original.
         data = self.load_tracking()
-        if unique_id not in data:
-            data[unique_id] = {"timestamps": {}}
+        if api_id not in data:
+            data[api_id] = {"timestamps": {}}
         now = success_time or datetime.now().isoformat()
-        data[unique_id]["timestamps"]["last_success"] = now
-        data[unique_id]["timestamps"]["last_attempt"] = now
+        data[api_id]["timestamps"]["last_success"] = now
+        data[api_id]["timestamps"]["last_attempt"] = now
         self.save_tracking(data)
 
-    def update_attempt(self,unique_id):
+    def update_attempt(self,api_id):
         data = self.load_tracking()
-        if unique_id not in data:
-            data[unique_id] = {"timestamps": {}}
+        if api_id not in data:
+            data[api_id] = {"timestamps": {}}
         now = datetime.now().isoformat()
-        data[unique_id]["timestamps"]["last_attempt"] = now
-
+        data[api_id]["timestamps"]["last_attempt"] = now
     
 def cli_queriesmanager():
     import argparse
