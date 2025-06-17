@@ -322,7 +322,7 @@ def demo_get_tabular_trend_OvationSuggested():
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
-    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())++
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     sessions = {}
 
     session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
