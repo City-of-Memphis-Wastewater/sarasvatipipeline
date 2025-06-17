@@ -55,7 +55,7 @@ def start_daemon():
     # Dynamically import the main module using the project directory
     module_path = f"{project_dir}.main"
     project_module = importlib.import_module(module_path)
-    # Get and call the `main()` function from the project module
+    # Get and call the "main()" function from the project module
     main = getattr(project_module, "main")
     write_running_flag()
     main()

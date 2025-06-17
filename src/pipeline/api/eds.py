@@ -39,7 +39,7 @@ class EdsClient:
             'type': 'rest client'
         }
         try:
-            response = make_request(url = request_url, data=data)
+            response = make_request(url = request_url, data=data, method="POST")
             if response is None:
                 logging.warning("Request failed—received NoneType response. Skipping token retrieval.")
                 return None, None  # Prevent AttributeError
@@ -63,75 +63,40 @@ class EdsClient:
         pprint(response.__dict__)
         return response
 
-    def print_point_info_row(self,point_data, shortdesc):
-        print(f'''{shortdesc}, sid:{point_data["sid"]}, iess:{point_data["iess"]}, dt:{datetime.fromtimestamp(point_data["ts"])}, un:{point_data["un"]}. av:{round(point_data["value"],2)}''')
+    @staticmethod
+    def print_point_info_row(row):
+        # use theis when unpacking after bulk retrieval, not when retrieving
+        print(f'''{row["shortdesc"]}, sid:{row["sid"]}, iess:{row["iess"]}, dt:{datetime.fromtimestamp(row["ts"])}, un:{row["un"]}. av:{round(row["value"],2)}''')
 
-    #def get_points_live(self,api_id: str,sid: int,shortdesc : str="",headers = None):
-    def get_points_live(self,api_id: str,iess: str,shortdesc : str="",headers = None):
-    #def get_points_live(self,session, iess: str):
+    @staticmethod
+    def get_points_live_mod(session, iess: str):
         # please make this session based rather than header based
         "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
-        print(f"\nEdsClient.get_points_live")
-        api_url = str(self.config[api_id]["url"]) # api_id should only ever refer to the secrets.yaml file key
-        request_url = api_url + 'points/query'
-        print(f"request_url = {request_url}")
-        query = {
-            'filters' : [{
-            #'sid': [sid], # test without
-            'iess': [iess], # test with
-            'tg' : [0, 1],
-            }],
-            'order' : ['iess']
-            }
-
-        response = make_request(url = request_url, headers=headers, data = query)
-        if response is None:
-            return None
-        else:
-            byte_string = response.content
-            decoded_str = byte_string.decode('utf-8')
-            data = json.loads(decoded_str) 
-            #pprint(f"data={data}")
-            points_datas = data.get("points", [])
-            if not points_datas:
-                #print(f"{shortdesc}, sid:{sid}, no data returned, len(points)==0")
-                print(f"{shortdesc}, iess:{iess}, no data returned, len(points)==0")
-            else:
-                for point_data in points_datas:
-                    self.print_point_info_row(point_data, shortdesc)
-            return points_datas[0]  # You expect exactly one point usually
-
-    def get_points_live_mod(self, session, iess: str):
-        # please make this session based rather than header based
-        "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
-        print(f"\nEdsClient.get_points_live")
         api_url = str(session.custom_dict["url"]) 
-        request_url = api_url + 'points/query'
-        print(f"request_url = {request_url}")
+
         query = {
             'filters' : [{
-            #'sid': [sid], # test without
-            'iess': [iess], # test with
+            'iess': [iess],
             'tg' : [0, 1],
             }],
             'order' : ['iess']
             }
-
-        response = make_request(url = request_url, headers=headers, data = query)
+        response = session.post(api_url + 'points/query', json=query, verify=False).json()
+        #print(f"response = {response}")
+        
         if response is None:
             return None
+        
+        points_datas = response.get("points", [])
+        if not points_datas:
+            raise ValueError(f"No data returned for iess='{iess}': len(points) == 0")
+        elif len(points_datas) != 1:
+            raise ValueError(f"Expected exactly one point, got {len(points_datas)}")
         else:
-            byte_string = response.content
-            decoded_str = byte_string.decode('utf-8')
-            data = json.loads(decoded_str) 
-            #pprint(f"data={data}")
-            points_datas = data.get("points", [])
-            if not points_datas:
-                print(f"{shortdesc}, sid:{sid}, no data returned, len(points)==0")
-            else:
-                for point_data in points_datas:
-                    self.print_point_info_row(point_data, shortdesc)
-            return points_datas[0]  # You expect exactly one point usually
+            point_data = points_datas[0] # You expect exactly one point usually
+            print(f"point_data = {point_data}")
+    
+        return point_data  
     
     def get_tabular_mod(session, req_id, point_list):
         results = [[] for _ in range(len(point_list))]
@@ -251,21 +216,17 @@ class EdsClient:
             for line in lines:
                 f.write(line + "\n")  # Save each line in the text file
                 
-def fetch_eds_data(eds_api, site, iess, shortdesc, headers):
-    point_data = eds_api.get_points_live(api_id=site, iess=iess, shortdesc=shortdesc, headers=headers)
+def fetch_eds_data(session, iess):
+    point_data = EdsClient.get_points_live_mod(session, iess)
     if point_data is None:
         raise ValueError(f"No live point returned for iess {iess}")
     ts = point_data["ts"]
     value = point_data["value"]
     return ts, value
 
-def fetch_eds_data2(eds_api, site, iess, shortdesc, headers):
-    point_data = eds_api.get_points_live(api_id=site, iess=iess, shortdesc=shortdesc, headers=headers)
-    if point_data is None:
-        raise ValueError(f"No live point returned for iess {iess}")
-    ts = point_data["ts"]
-    value = point_data["value"]
-    return ts, value
+def fetch_eds_data_row(session, iess):
+    point_data = EdsClient.get_points_live_mod(session, iess)
+    return point_data
 
 def demo_get_tabular_trend():
     print("Start: demo_show_points_tabular_trend()")
@@ -287,8 +248,9 @@ def login_to_session(api_url, username, password):
     session = requests.Session()
 
     data = {'username': username, 'password': password, 'type': 'script'}
-    res = session.post(api_url + 'login', json=data, verify=False).json()
-    session.headers['Authorization'] = 'Bearer ' + res['sessionId']
+    response = session.post(api_url + 'login', json=data, verify=False).json()
+    print(f"response = {response}")
+    session.headers['Authorization'] = 'Bearer ' + response['sessionId']
     return session
 
 def create_tabular_request(session, api_url, starttime, endtime, points):
@@ -305,9 +267,9 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
             'function': 'AVG'
         } for p in points],
     }
-    res = session.post(api_url + 'trend/tabular', json=data, verify=False).json()
-    print(f"res = {res}")
-    return res['id']
+    response = session.post(api_url + 'trend/tabular', json=data, verify=False).json()
+    #print(f"response = {response}")
+    return response['id']
 
 def get_query_point_list(csv_path, api_id):
     print(f"csv_path = {csv_path}")
@@ -366,7 +328,8 @@ def demo_get_tabular_trend_OvationSuggested():
         session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
         sessions.update({"WWTF":session_stiles})
 
-    queries_dictarray = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
+    queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
+    queries_dictarray = load_query_rows_from_csv_files(queries_file_path_list)
     queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
     
     for key, session in sessions.items():

@@ -15,7 +15,7 @@ class RjnClient:
             'password': self.config['password']
         }
         try:
-            response = make_request(request_url, data)
+            response = make_request(request_url, data, method="POST")
         except ConnectionError as e:
             print("Skipping RjnClient.get_token_and_headers() due to connection error")
             print(e)
@@ -33,11 +33,21 @@ class RjnClient:
     
     def send_point(self, payload: dict):
         request_url = self.api_url + 'data/point'  # Adjust this if needed
-        response = make_request(url=request_url, headers=self.headers, data=payload)
+        response = make_request(url=request_url, headers=self.headers, data=payload, method="POST")
         if response.status_code == 200:
             print(f"Successfully posted point {payload.get('rjn_name')}")
         else:
             print(f"Failed to post point {payload.get('rjn_name')}: {response.status_code}")
+
+
+def login_to_session(api_url, client_id, password):
+    session = requests.Session()
+
+    data = {'client_id': client_id, 'password': password, 'type': 'script'}
+    response = session.post(api_url + 'auth', json=data, verify=True).json()
+    print(f"response = {response}")
+    session.headers['Authorization'] = 'Bearer ' + response['token']
+    return session
 
 def send_data_to_rjn(base_url:str, project_id:str, entity_id:int, headers:dict, timestamps, values):
     if timestamps is None:

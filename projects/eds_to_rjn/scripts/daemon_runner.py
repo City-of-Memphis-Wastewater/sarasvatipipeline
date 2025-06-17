@@ -2,9 +2,9 @@
 import schedule, time
 #import logging
 import datetime
-from ..scripts import collector, storage, aggregator
+from ..scripts import collector, storage, aggregator, sanitizer
+from ..code import collector, storage, aggregator, sanitizer
 from src.pipeline.api.eds import login_to_session, get_query_point_list # actually generalized beyond EDS
-#from src.pipeline.daemon import collector, storage, aggregator
 from .main import get_eds_maxson_token_and_headers, get_rjn_tokens_and_headers
 from src.pipeline.env import SecretsYaml
 from src.pipeline.projectmanager import ProjectManager
@@ -25,27 +25,20 @@ def run_live_cycle():
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
 
-    eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_dict) 
-    headers_eds_stiles = None
-
     queries_dictarray = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
     queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
     
+    #for key, session in sessions.items():
     key = "Maxson"
     session = sessions[key] 
-    point_list = [row['iess'] for row in queries_defaultdictlist.get(key,[])]
-    queries_defaultdict = queries_defaultdictlist.get(key,[])        
 
-    queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
-    for csv_file_path in queries_file_path_list:
-        data = collector.collect_live_values(csv_file_path, eds_api, headers_eds_maxson, headers_eds_stiles)
-        #data = collector.collect_live_values(csv_file_path, session)
-        #data = collector.collect_live_values(point_list, session)
-        #data = collector.collect_live_values(session, queries_defaultdict) # need a way to for the eds_api method refernce to land on the other end
-        if len(data)==0:
-            print("No data retrieved via collector.collect_live_values(). Skipping storage.store_live_values()")
-        else:
-            storage.store_live_values(data, project_manager.get_aggregate_dir()+"/live_data.csv") # project_manager.get_live_data_csv_file
+    queries_defaultdict = queries_defaultdictlist.get(key,[])        
+    data = collector.collect_live_values(session, queries_defaultdict) # need a way to for the eds_api method refernce to land on the other end
+    print(f"data = {data}")
+    if len(data)==0:
+        print("No data retrieved via collector.collect_live_values(). Skipping storage.store_live_values()")
+    else:
+        storage.store_live_values(data, project_manager.get_aggregate_dir()+"/live_data.csv") # project_manager.get_live_data_csv_file
 
 def run_hourly_cycle(): 
     print("Running hourly cycle...")
