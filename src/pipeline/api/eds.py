@@ -22,7 +22,6 @@ class EdsClient:
         self.config = config
 
     def get_token_and_headers(self,zd="Maxson"):
-        #print("\nEdsClient.get_token_and_headers()")
         logging.info("EdsClient.get_token_and_headers()")
 
         try:
