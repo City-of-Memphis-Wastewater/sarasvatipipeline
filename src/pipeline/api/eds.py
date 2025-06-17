@@ -5,13 +5,13 @@ from urllib3.exceptions import HTTPError
 from requests.exceptions import RequestException
 import requests
 import sys
-import csv
 import time
-from collections import defaultdict
+import csv
 
 from src.pipeline.calls import make_request, call_ping
 from src.pipeline.env import find_urls
 from src.pipeline import helpers
+from src.pipeline.queriesmanager import load_query_rows_from_csv_files, group_queries_by_api_url
 from pprint import pprint
 
 # Configure logging (adjust level as needed)
@@ -68,6 +68,7 @@ class EdsClient:
         print(f'''{shortdesc}, sid:{point_data["sid"]}, iess:{point_data["iess"]}, dt:{datetime.fromtimestamp(point_data["ts"])}, un:{point_data["un"]}. av:{round(point_data["value"],2)}''')
 
     def get_points_live(self,api_id: str,sid: int,shortdesc : str="",headers = None):
+        # please make this session based rather than header based
         "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
         print(f"\nEdsClient.get_points_live")
         api_url = str(self.config[api_id]["url"]) # api_id should only ever refer to the secrets.yaml file key
@@ -75,7 +76,8 @@ class EdsClient:
         print(f"request_url = {request_url}")
         query = {
             'filters' : [{
-            'sid': [sid],
+            'sid': [sid], # test without
+            #'iess': [iess], # test with
             'tg' : [0, 1],
             }],
             'order' : ['iess']
@@ -224,6 +226,14 @@ def fetch_eds_data(eds_api, site, sid, shortdesc, headers):
     value = point_data["value"]
     return ts, value
 
+def fetch_eds_data2(eds_api, site, sid, shortdesc, headers):
+    point_data = eds_api.get_points_live(api_id=site, sid=sid, shortdesc=shortdesc, headers=headers)
+    if point_data is None:
+        raise ValueError(f"No live point returned for SID {sid}")
+    ts = point_data["ts"]
+    value = point_data["value"]
+    return ts, value
+
 def demo_get_tabular_trend():
     print("Start: demo_show_points_tabular_trend()")
     from src.pipeline.env import SecretsYaml
@@ -266,23 +276,6 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
     print(f"res = {res}")
     return res['id']
 
-def load_query_rows_from_csv_files(csv_paths_list):
-    query_array = []
-    for csv_path in csv_paths_list:
-        print(f"csv_path = {csv_path}")
-        with open(csv_path, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                query_array.append(row)
-    return query_array
-
-def group_queries_by_api_url(query_array):
-    query_array_grouped = defaultdict(list)
-    for row in query_array:
-        api_id = row['zd']
-        query_array_grouped[api_id].append(row)
-    return query_array_grouped
-
 def get_query_point_list(csv_path, api_id):
     print(f"csv_path = {csv_path}")
     point_list = list()
@@ -322,14 +315,14 @@ def wait_for_request_execution_session(session, api_url, req_id):
 def demo_get_tabular_trend_OvationSuggested():
     print("Start: demo_show_points_tabular_trend()")
     # typical opening, for discerning the project, the secrets files, the queries, and preparing for sessions.
-    from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
+    from src.pipeline.env import SecretsYaml
     from src.pipeline.queriesmanager import QueriesManager
+
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
-    #queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
-    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())++
     sessions = {}
 
     session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
@@ -340,13 +333,12 @@ def demo_get_tabular_trend_OvationSuggested():
         session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
         sessions.update({"WWTF":session_stiles})
 
-    query_array_ungrouped = load_query_rows_from_csv_files(queries_manager.get_query_file_paths_list())
-    query_array = group_queries_by_api_url(query_array_ungrouped)
+    queries_dictarray = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
+    queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
     
     for key, session in sessions.items():
         # Discern which queries to use
-        point_list = [row['iess'] for row in query_array.get(key,[])]
-        #print(f"point_list = {point_list}")
+        point_list = [row['iess'] for row in queries_defaultdictlist.get(key,[])]
 
         # Discern the time range to use
         starttime = queries_manager.get_most_recent_successful_timestamp(api_id=key)

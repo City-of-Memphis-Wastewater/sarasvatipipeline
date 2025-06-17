@@ -37,7 +37,7 @@ def sketch_maxson():
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
-        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
+        queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
         print(f"Using query file: {queries_file_path_list}")
     except FileNotFoundError as e:
         print(f"Error: {e}")
@@ -62,7 +62,7 @@ def sketch_andstiles():
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
     try:
-        queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
+        queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
         print(f"Using query file: {queries_file_path_list}")
     except FileNotFoundError as e:
         print(f"Error: {e}")

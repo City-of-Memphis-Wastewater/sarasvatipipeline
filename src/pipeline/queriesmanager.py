@@ -2,6 +2,9 @@ import os
 import toml
 from datetime import datetime
 import json
+import csv
+from collections import defaultdict
+
 
 from src.pipeline import helpers
 
@@ -17,7 +20,7 @@ class QueriesManager:
             raise ValueError("project_manager must be provided and not None.")
         self.project_manager = project_manager
 
-    def get_query_file_paths_list(self, filename=None):
+    def get_default_query_file_paths_list(self, filename=None):
         """
         Returns a list of query CSV file paths:
         - If "filename" is provided, use only that one. Expected source: argparse cli
@@ -89,7 +92,24 @@ class QueriesManager:
             data[api_id] = {"timestamps": {}}
         now = datetime.now().isoformat()
         data[api_id]["timestamps"]["last_attempt"] = now
-    
+
+def load_query_rows_from_csv_files(csv_paths_list):
+    queries_dictarray = []
+    for csv_path in csv_paths_list:
+        print(f"csv_path = {csv_path}")
+        with open(csv_path, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                queries_dictarray.append(row)
+    return queries_dictarray
+
+def group_queries_by_api_url(queries_array):
+    queries_array_grouped = defaultdict(list)
+    for row in queries_array:
+        api_id = row['zd']
+        queries_array_grouped[api_id].append(row)
+    return queries_array_grouped
+
 def cli_queriesmanager():
     import argparse
     from src.pipeline.projectmanager import ProjectManager
@@ -110,7 +130,7 @@ def cli_queriesmanager():
 
     try:
         # Get the query file path (either default or user-provided)
-        query_file_path = queries_manager.get_query_file_paths_list(args.csv_file)
+        query_file_path = queries_manager.get_default_query_file_paths_list(args.csv_file)
         print(f"Using query file: {query_file_path}")
         # Further processing with the query file...
         

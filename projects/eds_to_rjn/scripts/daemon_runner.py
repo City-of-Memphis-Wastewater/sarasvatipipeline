@@ -9,6 +9,7 @@ from .main import get_eds_maxson_token_and_headers, get_rjn_tokens_and_headers
 from src.pipeline.env import SecretsYaml
 from src.pipeline.projectmanager import ProjectManager
 from src.pipeline.queriesmanager import QueriesManager
+from src.pipeline.queriesmanager import load_query_rows_from_csv_files, group_queries_by_api_url
 
 def run_live_cycle():
     print("Running live cycle...")
@@ -18,8 +19,8 @@ def run_live_cycle():
     project_manager = ProjectManager(project_name)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     queries_manager = QueriesManager(project_manager)
-    queries_file_path_list = queries_manager.get_query_file_paths_list() # use default identified by the default-queries.toml file
     sessions = {}
+
     session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
@@ -27,18 +28,20 @@ def run_live_cycle():
     eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_dict) 
     headers_eds_stiles = None
 
-    # it would be better to load this into a dataframe
-    point_list = list()
-    for key, session in sessions.items():
-        for csv_file_path in queries_file_path_list:
-            # discern which queries to use
-            point_list.extend(get_query_point_list(csv_file_path, api_id = key))
-    print(f"point_list = {point_list}")
+    queries_dictarray = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
+    queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
+    
+    key = "Maxson"
+    session = sessions[key] 
+    point_list = [row['iess'] for row in queries_defaultdictlist.get(key,[])]
+    queries_defaultdict = queries_defaultdictlist.get(key,[])        
 
+    queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
     for csv_file_path in queries_file_path_list:
         data = collector.collect_live_values(csv_file_path, eds_api, headers_eds_maxson, headers_eds_stiles)
         #data = collector.collect_live_values(csv_file_path, session)
         #data = collector.collect_live_values(point_list, session)
+        #data = collector.collect_live_values(session, queries_defaultdict) # need a way to for the eds_api method refernce to land on the other end
         if len(data)==0:
             print("No data retrieved via collector.collect_live_values(). Skipping storage.store_live_values()")
         else:
