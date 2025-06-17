@@ -112,87 +112,6 @@ class EdsClient:
 
                 for idx, samples in enumerate(chunk['items']):
                     results[idx] += samples
-        
-    def get_tabular_trend(self,api_id: str="Maxson",sid: int=0,iess:str="M100FI.UNIT0@NET0", starttime :int=1744661000,endtime:int=1744661700,shortdesc : str="INF-DEFAULT",headers = None):
-        "Based on EDS REST API Python Examples.pdf, pages 36-37."
-        
-        '''create_tabular_request '''
-        api_url = str(self.config[api_id]["url"]) # api_id should only ever refer to the secrets.yaml file key
-        
-        "Initialize the query with a POST request" 
-        request_url = api_url + 'trend/tabular'
-        
-        data = {
-            'period' : {
-            'from' : starttime,
-            'till' : endtime
-            },
-            'step' : 150,
-            'items' : [{
-            'pointId' : {
-            'sid' : sid,
-            'iess' : iess
-            },
-            'shadePriority' : 'DEFAULT'
-            }]
-            }
-        
-        response = make_request(url = request_url, headers=headers, data = data, method="POST")
-        byte_string = response.content
-        decoded_str = byte_string.decode('utf-8')
-        data = json.loads(decoded_str)
-        request_id = data["id"]
- 
-        response_json = json.loads(response.content.decode('utf-8'))        
-        request_id = response_json["id"]
-        
-        def wait_for_request_execution(headers, req_id, api_url):
-            st = time.time()
-            while True:
-                time.sleep(1)
-                #response = session.get(f'{api_url}requests?id={req_id}', verify=False).json()
-                response = make_request(url = api_url, headers=headers, params = {id:req_id}, method="GET")
-                print(f"response = {response}")
-                
-                response_json = json.loads(response.content.decode('utf-8'))        
-                status = response_json[str(req_id)]
-                if status['status'] == 'FAILURE':
-                    raise RuntimeError('request [{}] failed: {}'.format(req_id, status['message']))
-                elif status['status'] == 'SUCCESS':
-                    break
-                elif status['status'] == 'EXECUTING':
-                    print('request [{}] progress: {:.2f}\n'.format(req_id, time.time() - st))
-
-            print('request [{}] executed in: {:.3f} s\n'.format(req_id, time.time() - st))
-
-        wait_for_request_execution(headers, req_id = request_id, api_url = api_url)
-
-        #time.sleep(4)
-        if response is None:
-            print("Tabular trend request failed: Check your secrets.yaml file URL.")
-            sys.exit()
-        byte_string = response.content
-        decoded_str = byte_string.decode('utf-8')
-        data = json.loads(decoded_str)
-        pprint(data)
-        pprint(f"data={data}")
-        request_id = data["id"] # query request_id, to reference an existing process, see page 36 of EDS REST API Python Examples.pdf.
-        pprint(f"request_id={request_id}")
-
-        # Prepare to retrieve tabular trend data 
-        query = '?id={}'.format(request_id) # the API expects 'id', but I use 'request_id' where possible for rigor.
-        #data = {'id': request_id} # already true
-        request_url = api_url + 'trend/tabular' + query
-        #request_url = api_url + 'events/read' + query
-        print(f"request_url = {request_url}")
-
-        # Delay request. First check the request_id (AKA request_id) to see status.
-        response = make_request(url = request_url, headers=headers, method = "GET") # includes the query request_id in the url
-        byte_string = response.content
-        print(f"byte_string = {byte_string}")
-        decoded_str = byte_string.decode('utf-8')
-        print(f"Status: {response.status_code}")
-        print(decoded_str[:500])  # Print just a slice
 
     def get_points_export(self,api_id: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
         "Success"
@@ -227,22 +146,6 @@ def fetch_eds_data(session, iess):
 def fetch_eds_data_row(session, iess):
     point_data = EdsClient.get_points_live_mod(session, iess)
     return point_data
-
-def demo_get_tabular_trend():
-    print("Start: demo_show_points_tabular_trend()")
-    from src.pipeline.env import SecretsYaml
-    from src.pipeline.projectmanager import ProjectManager
-    from src.pipeline.api.eds import EdsClient
-    project_name = ProjectManager.identify_default_project()
-    project_manager = ProjectManager(project_name)
-    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    key0 = list(secrets_dict.keys())[0]
-    key00 = list(secrets_dict[key0].keys())[0] # test whichever key is first in secrets.yaml
-    eds = EdsClient(secrets_dict[key0])
-    token_eds, headers_eds = eds.get_token_and_headers(zd=key00)
-    eds.get_tabular_trend(api_id=key00,shortdesc="DEMO",headers = headers_eds)
-    print(f"End: demo_show_points_tabular_trend()")
-
 
 def login_to_session(api_url, username, password):
     session = requests.Session()
@@ -386,7 +289,6 @@ if __name__ == "__main__":
     if cmd == "demo-points-export":
         demo_eds_save_point_export()
     elif cmd == "demo-trend":
-        #demo_get_tabular_trend()
         demo_get_tabular_trend_OvationSuggested()
     elif cmd == "ping":
         ping()
