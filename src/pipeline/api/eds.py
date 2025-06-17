@@ -66,7 +66,9 @@ class EdsClient:
     def print_point_info_row(self,point_data, shortdesc):
         print(f'''{shortdesc}, sid:{point_data["sid"]}, iess:{point_data["iess"]}, dt:{datetime.fromtimestamp(point_data["ts"])}, un:{point_data["un"]}. av:{round(point_data["value"],2)}''')
 
-    def get_points_live(self,api_id: str,sid: int,shortdesc : str="",headers = None):
+    #def get_points_live(self,api_id: str,sid: int,shortdesc : str="",headers = None):
+    def get_points_live(self,api_id: str,iess: str,shortdesc : str="",headers = None):
+    #def get_points_live(self,session, iess: str):
         # please make this session based rather than header based
         "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
         print(f"\nEdsClient.get_points_live")
@@ -75,8 +77,41 @@ class EdsClient:
         print(f"request_url = {request_url}")
         query = {
             'filters' : [{
-            'sid': [sid], # test without
-            #'iess': [iess], # test with
+            #'sid': [sid], # test without
+            'iess': [iess], # test with
+            'tg' : [0, 1],
+            }],
+            'order' : ['iess']
+            }
+
+        response = make_request(url = request_url, headers=headers, data = query)
+        if response is None:
+            return None
+        else:
+            byte_string = response.content
+            decoded_str = byte_string.decode('utf-8')
+            data = json.loads(decoded_str) 
+            #pprint(f"data={data}")
+            points_datas = data.get("points", [])
+            if not points_datas:
+                #print(f"{shortdesc}, sid:{sid}, no data returned, len(points)==0")
+                print(f"{shortdesc}, iess:{iess}, no data returned, len(points)==0")
+            else:
+                for point_data in points_datas:
+                    self.print_point_info_row(point_data, shortdesc)
+            return points_datas[0]  # You expect exactly one point usually
+
+    def get_points_live_mod(self, session, iess: str):
+        # please make this session based rather than header based
+        "Access live value of point from the EDS, based on zs/api_id value (i.e. Maxson, WWTF, Server)"
+        print(f"\nEdsClient.get_points_live")
+        api_url = str(session.custom_dict["url"]) 
+        request_url = api_url + 'points/query'
+        print(f"request_url = {request_url}")
+        query = {
+            'filters' : [{
+            #'sid': [sid], # test without
+            'iess': [iess], # test with
             'tg' : [0, 1],
             }],
             'order' : ['iess']
@@ -98,7 +133,6 @@ class EdsClient:
                     self.print_point_info_row(point_data, shortdesc)
             return points_datas[0]  # You expect exactly one point usually
     
-    @staticmethod
     def get_tabular_mod(session, req_id, point_list):
         results = [[] for _ in range(len(point_list))]
         while True:
@@ -118,7 +152,7 @@ class EdsClient:
         "Based on EDS REST API Python Examples.pdf, pages 36-37."
         
         '''create_tabular_request '''
-        api_url = str(self.config[api_id]["url"])
+        api_url = str(self.config[api_id]["url"]) # api_id should only ever refer to the secrets.yaml file key
         
         "Initialize the query with a POST request" 
         request_url = api_url + 'trend/tabular'
@@ -216,19 +250,19 @@ class EdsClient:
         with open(export_file_path, "w", encoding="utf-8") as f:
             for line in lines:
                 f.write(line + "\n")  # Save each line in the text file
-
-def fetch_eds_data(eds_api, site, sid, shortdesc, headers):
-    point_data = eds_api.get_points_live(api_id=site, sid=sid, shortdesc=shortdesc, headers=headers)
+                
+def fetch_eds_data(eds_api, site, iess, shortdesc, headers):
+    point_data = eds_api.get_points_live(api_id=site, iess=iess, shortdesc=shortdesc, headers=headers)
     if point_data is None:
-        raise ValueError(f"No live point returned for SID {sid}")
+        raise ValueError(f"No live point returned for iess {iess}")
     ts = point_data["ts"]
     value = point_data["value"]
     return ts, value
 
-def fetch_eds_data2(eds_api, site, sid, shortdesc, headers):
-    point_data = eds_api.get_points_live(api_id=site, sid=sid, shortdesc=shortdesc, headers=headers)
+def fetch_eds_data2(eds_api, site, iess, shortdesc, headers):
+    point_data = eds_api.get_points_live(api_id=site, iess=iess, shortdesc=shortdesc, headers=headers)
     if point_data is None:
-        raise ValueError(f"No live point returned for SID {sid}")
+        raise ValueError(f"No live point returned for iess {iess}")
     ts = point_data["ts"]
     value = point_data["value"]
     return ts, value

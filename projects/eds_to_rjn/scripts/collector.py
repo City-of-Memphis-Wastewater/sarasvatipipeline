@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from src.pipeline.helpers import round_time_to_nearest_five_minutes
-from src.pipeline.api.eds import fetch_eds_data
+from src.pipeline.api.eds import fetch_eds_data2
 
 import csv
 def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stiles):
@@ -19,7 +19,8 @@ def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stile
                 continue
             try:
                 # Convert and validate values
-                eds_sid = int(row["sid"]) if row["sid"] not in (None, '', '\t') else None
+                #eds_sid = int(row["sid"]) if row["sid"] not in (None, '', '\t') else None
+                iess = str(row["iess"]) if row["iess"] not in (None, '', '\t') else None
                 shortdesc = row.get("shortdesc", "")
                 
                 # Validate rjn_siteid and rjn_entityid are not None or empty
@@ -27,8 +28,8 @@ def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stile
                 rjn_entityid = row["rjn_entityid"] if row.get("rjn_entityid") not in (None, '', '\t') else None
                 
                 # Ensure the necessary data is present, otherwise skip the row
-                if None in (eds_sid, rjn_siteid, rjn_entityid):
-                    print(f"Skipping row due to missing required values: SID={eds_sid}, rjn_siteid={rjn_siteid}, rjn_entityid={rjn_entityid}")
+                if None in (iess, rjn_siteid, rjn_entityid):
+                    print(f"Skipping row due to missing required values: iess={iess}, rjn_siteid={rjn_siteid}, rjn_entityid={rjn_entityid}")
                     continue
 
             except KeyError as e:
@@ -44,10 +45,10 @@ def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stile
                 eds_headers = eds_headers_stiles
 
             try:
-                ts, value = fetch_eds_data(
+                ts, value = fetch_eds_data2(
                     eds_api=eds_api,
                     site=row["zd"],
-                    sid=eds_sid,
+                    iess=iess,
                     shortdesc=shortdesc,
                     headers=eds_headers
                 )
@@ -55,7 +56,7 @@ def collect_live_values(csv_path, eds_api, eds_headers_maxson, eds_headers_stile
                     rounded_dt = round_time_to_nearest_five_minutes(datetime.fromtimestamp(ts))
                     data.append({
                         "timestamp": rounded_dt.isoformat(),
-                        "sid": eds_sid,
+                        "iess":iess,
                         "shortdesc": shortdesc,
                         "rjn_siteid": rjn_siteid,
                         "rjn_entityid": rjn_entityid,

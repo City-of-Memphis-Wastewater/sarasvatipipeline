@@ -17,7 +17,7 @@ from src.pipeline.helpers import round_time_to_nearest_five_minutes
 from src.pipeline.projectmanager import ProjectManager
 from src.pipeline.queriesmanager import QueriesManager
 from src.pipeline.api.rjn import send_data_to_rjn
-from src.pipeline.api.eds import fetch_eds_data
+from src.pipeline.api.eds import fetch_eds_data2
 
 def main():
     #sketch_maxson()
@@ -160,7 +160,7 @@ def process_sites_and_send(csv_path, eds_api, eds_site, eds_headers, rjn_base_ur
 
             try:
                 # Fetch data from EDS
-                ts, value = fetch_eds_data(
+                ts, value = fetch_eds_data2(
                     eds_api=eds_api,
                     site=eds_site,
                     sid=eds_sid,

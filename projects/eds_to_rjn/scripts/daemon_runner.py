@@ -114,5 +114,18 @@ def main():
         schedule.run_pending()
         time.sleep(1)
 
+#if __name__ == "__main__":
+#    main()
+
 if __name__ == "__main__":
-    main()
+    import sys
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "default"
+
+    if cmd == "main":
+        main()
+    elif cmd == "flive":
+        run_live_cycle()
+    else:
+        print("Usage options: \n"
+        "poetry run python -m projects.eds_to_rjn.scripts.daemon_runner main \n"
+        "poetry run python -m projects.eds_to_rjn.scripts.daemon_runner flive")
