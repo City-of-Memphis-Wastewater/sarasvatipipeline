@@ -53,10 +53,10 @@ def sketch_maxson():
     session_maxson = eds.login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
-
-    session_rjn = rjn.login_to_session(api_url = secrets_dict["contractor_apis"]["RJN"]["url"] ,client_id = secrets_dict["contractor_apis"]["RJN"]["client_id"], password = secrets_dict["contractor_apis"]["RJN"]["password"])
-    session_rjn.custom_dict = secrets_dict["contractor_apis"]["RJN"]
-    sessions.update({"RJN":session_rjn})
+    if False:
+        session_rjn = rjn.login_to_session(api_url = secrets_dict["contractor_apis"]["RJN"]["url"] ,client_id = secrets_dict["contractor_apis"]["RJN"]["client_id"], password = secrets_dict["contractor_apis"]["RJN"]["password"])
+        session_rjn.custom_dict = secrets_dict["contractor_apis"]["RJN"]
+        sessions.update({"RJN":session_rjn})
 
     '''
     eds_api, headers_eds_maxson = get_eds_maxson_token_and_headers(secrets_dict)

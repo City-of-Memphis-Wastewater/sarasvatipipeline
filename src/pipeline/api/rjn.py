@@ -44,7 +44,7 @@ def login_to_session(api_url, client_id, password):
     session = requests.Session()
 
     data = {'client_id': client_id, 'password': password, 'type': 'script'}
-    response = session.post(api_url + 'auth', json=data, verify=True).json()
+    response = session.post(api_url + 'auth', json=data, verify=False).json()
     print(f"response = {response}")
     session.headers['Authorization'] = 'Bearer ' + response['token']
     return session
