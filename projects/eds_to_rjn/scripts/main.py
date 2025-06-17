@@ -77,38 +77,40 @@ def sketch_maxson():
     session = sessions[key] 
 
     queries_defaultdict = queries_defaultdictlist.get(key,[])
+    # data_updated should probably be  nested dictionaries rather than flattened rows, with keys for discerning source (localquery vs EDS vs RJN)
     data_updated = collector.collect_live_values(session, queries_defaultdict) # This returns everything known plus everything recieved. It is glorious. It is complete. It is not sanitized.
-    data_sanitized_for_printing = eds_to_rjn.sanitize_data_for_printing(data_updated)
+    data_sanitized_for_printing = sanitizer.sanitize_data_for_printing(data_updated)
+    data_sanitized_for_aggregated_storage = sanitizer.sanitize_data_for_aggregated_storage(data_updated)
 
     for row in data_sanitized_for_printing:
         EdsClient.print_point_info_row(row)
 
     print(f"queries_defaultdict = {queries_defaultdict}")
-    print(f"data = {data}")
+    print(f"data_updated = {data_updated}")
 
     # Process timestamp
-    for row in data_updated
-    dt = datetime.fromtimestamp()
-    rounded_dt = round_time_to_nearest_five_minutes(dt)
-    timestamp = rounded_dt
-    timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-    # Send data to RJN
-    send_data_to_rjn(
-        base_url=rjn_base_url,
-        project_id=rjn_siteid,
-        entity_id=rjn_entityid,
-        headers=rjn_headers,
-        timestamps=[timestamp_str],
-        values=[round(value, 2)]
-    )
+    for row in data_updated:
+        dt = datetime.fromtimestamp(row["ts"])
+        rounded_dt = round_time_to_nearest_five_minutes(dt)
+        timestamp = rounded_dt
+        timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        # Send data to RJN
+        send_data_to_rjn(
+            base_url=rjn_base_url,
+            project_id=rjn_siteid,
+            entity_id=rjn_entityid,
+            headers=rjn_headers,
+            timestamps=[timestamp_str],
+            values=[round(value, 2)]
+        )
 
-    send_data_to_rjn2(
-        session_rjn,
-        project_id=session_rjn.custom_dict["url"],
-        entity_id=rjn_entityid,
-        timestamps=[timestamp_str],
-        values=[round(value, 2)]
-    )
+        send_data_to_rjn2(
+            session_rjn,
+            project_id=session_rjn.custom_dict["url"],
+            entity_id=rjn_entityid,
+            timestamps=[timestamp_str],
+            values=[round(value, 2)]
+        )
 
 # all of this can be mitigated with requests.Session()
 # Used, dameon_runner.py, as of 04 June 2025

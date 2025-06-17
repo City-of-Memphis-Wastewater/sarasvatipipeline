@@ -9,3 +9,12 @@ So. We need explicit and discernible sanitization scenarios, called a scripted a
 '''
 #from ..code import collector, storage, aggregator
 
+def sanitize_data_for_printing(data):
+    data_sanitized_for_printing = data
+    #pass
+    return data_sanitized_for_printing
+
+def sanitize_data_for_aggregated_storage(data):
+    data_sanitized_for_aggregated_storage = data
+    #pass
+    return data_sanitized_for_aggregated_storage

@@ -63,8 +63,17 @@ def collect_live_values(session, queries_defaultdict):
                 print(f"\trow->fetched = {row}")
             else:
                 point_data = EdsClient.get_points_live_mod(session, iess)
-                
-                #fetched = {"timestamp":ts,"value":value}
+                conflicts = set(row.keys()) & set(point_data.keys())
+                if conflicts:
+                    print(f"Warning: key collision on {conflicts}")
+
+                '''
+                Not the worst idea:
+                Use nested structures
+                Instead of flattening all keys into the same dict, keep fetched data as a sub-dictionary.
+                In which case, the aggregate should be JSON (or TOML, whatever), not CSV.
+
+                '''
                 row.update(point_data)
                 print(f"\trow->fetched = {row}")
 
