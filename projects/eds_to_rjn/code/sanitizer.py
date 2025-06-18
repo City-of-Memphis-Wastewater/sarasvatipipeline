@@ -21,12 +21,15 @@ def sanitize_data_for_aggregated_storage(data):
     sanitized = []
     for row in data:
         rounded_dt = round_time_to_nearest_five_minutes(datetime.fromtimestamp(row["ts"])) # arguably not appropriate at this point. round at transmission
-        row["timestamp_sani"] = rounded_dt
-        row["value_rounded"] = round(row["value"], 2)
+        #row["timestamp_sani"] = rounded_dt
+        #row["value_rounded"] = round(row["value"], 2)
 
         sanitized.append({
             "timestamp": rounded_dt.isoformat(),
+            "ts": rounded_dt.timestamp(),
             "iess": row.get("iess"),
+            "sid": row.get("sid"),
+            "un": row.get("un"),
             "shortdesc": row.get("shortdesc"),
             "rjn_siteid": row.get("rjn_siteid"),
             "rjn_entityid": row.get("rjn_entityid"),

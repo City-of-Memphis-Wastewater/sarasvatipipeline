@@ -66,7 +66,7 @@ class EdsClient:
     @staticmethod
     def print_point_info_row(row):
         # use theis when unpacking after bulk retrieval, not when retrieving
-        print(f'''{row["shortdesc"]}, sid:{row["sid"]}, iess:{row["iess"]}, dt:{datetime.fromtimestamp(row["ts"])}, un:{row["un"]}. av:{round(row["value"],2)}''')
+        print(f'''iess:{row["iess"]}, dt:{datetime.fromtimestamp(row["ts"])}, un:{row["un"]}, av:{round(row["value"],2)}, {row["shortdesc"]}''')
 
     @staticmethod
     def get_points_live_mod(session, iess: str):

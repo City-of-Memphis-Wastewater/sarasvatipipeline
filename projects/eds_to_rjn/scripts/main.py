@@ -25,6 +25,15 @@ from src.pipeline.api.eds import fetch_eds_data
 from ..code import collector, storage, aggregator, sanitizer
 from src.pipeline.queriesmanager import load_query_rows_from_csv_files, group_queries_by_api_url
 
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG)  # or INFO, WARNING, ERROR
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)  
+
 def main():
     sketch_daemon_runner_main()
 
@@ -77,11 +86,11 @@ def sketch_maxson():
     data_sanitized_for_printing = sanitizer.sanitize_data_for_printing(data_updated)
     data_sanitized_for_aggregated_storage = sanitizer.sanitize_data_for_aggregated_storage(data_updated)
 
-    for row in data_sanitized_for_printing:
+    for row in data_sanitized_for_aggregated_storage:
         EdsClient.print_point_info_row(row)
 
-    print(f"queries_defaultdict = {queries_defaultdict}")
-    print(f"data_updated = {data_updated}")
+    #print(f"queries_defaultdict = {queries_defaultdict}")
+    #print(f"data_updated = {data_updated}")
 
     # Process timestamp
     """

@@ -1,5 +1,7 @@
 #pipeline.collector.py
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 from src.pipeline.helpers import round_time_to_nearest_five_minutes
 from src.pipeline.api.eds import fetch_eds_data, EdsClient
@@ -32,7 +34,7 @@ def collect_live_values(session, queries_defaultdict):
             point_data = EdsClient.get_points_live_mod(session, iess)
             conflicts = set(row.keys()) & set(point_data.keys())
             if conflicts:
-                print(f"Warning: key collision on {conflicts}, for iess = {iess}. This is expected.")
+                logger.debug(f"Warning: key collision on {conflicts}, for iess = {iess}. This is expected.")
             '''
             Not the worst idea:
             Use nested structures
