@@ -21,14 +21,18 @@ class QueriesManager:
         self.project_manager = project_manager
 
     def get_default_query_file_paths_list(self, filename=None):
+        # work on this to recieve a list of filenames explicitly stated in a main sketch script
         """
         Returns a list of query CSV file paths:
         - If "filename" is provided, use only that one. Expected source: argparse cli
         - Else, try to read default-queries.toml for a list.
         - Else, fallback to ['points.csv']
         """
-        if filename:
+        if filename and isinstance(filename,str):
             "Return a one-csv list"
+            paths = [self.project_manager.get_queries_file_path(filename)]
+        if filename and isinstance(filename,list):
+            "Return a multi-csv list"
             paths = [self.project_manager.get_queries_file_path(filename)]
         else:
             try:

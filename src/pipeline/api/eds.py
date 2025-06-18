@@ -151,7 +151,7 @@ def login_to_session(api_url, username, password):
 
     data = {'username': username, 'password': password, 'type': 'script'}
     response = session.post(api_url + 'login', json=data, verify=False).json()
-    print(f"response = {response}")
+    #print(f"response = {response}")
     session.headers['Authorization'] = 'Bearer ' + response['sessionId']
     return session
 
