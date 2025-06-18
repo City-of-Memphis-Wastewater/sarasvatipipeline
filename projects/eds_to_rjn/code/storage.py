@@ -6,4 +6,4 @@ def store_live_values(data, path):
         if f.tell() == 0:  # file is empty
             writer.writeheader()
         writer.writerows(data)
-    print(f"Live values stored, {datetime.now()}")
+    print(f"Live values stored, {datetime.now()} to {path}")

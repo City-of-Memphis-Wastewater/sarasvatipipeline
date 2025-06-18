@@ -26,17 +26,12 @@ from ..code import collector, storage, aggregator, sanitizer
 from src.pipeline.queriesmanager import load_query_rows_from_csv_files, group_queries_by_api_url
 
 def main():
-    one_sec_test = True
-    if one_sec_test:
-        sketch_maxson()
-    else:
-        sketch_daemon_runner_main()
+    sketch_daemon_runner_main()
 
 def sketch_daemon_runner_main():
     #from . import daemon_runner
     from projects.eds_to_rjn.scripts import daemon_runner
     daemon_runner.main()
-
 
 def sketch_maxson():
     test_connection_to_internet()
@@ -45,8 +40,8 @@ def sketch_maxson():
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
     queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
-    queries_dictarray = load_query_rows_from_csv_files(queries_file_path_list)
-    queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
+    queries_dictlist = load_query_rows_from_csv_files(queries_file_path_list)
+    queries_defaultdictlist = group_queries_by_api_url(queries_dictlist)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     sessions = {}
 
@@ -89,6 +84,7 @@ def sketch_maxson():
     print(f"data_updated = {data_updated}")
 
     # Process timestamp
+    """
     for row in data_updated:
         dt = datetime.fromtimestamp(row["ts"])
         rounded_dt = round_time_to_nearest_five_minutes(dt)
@@ -106,11 +102,11 @@ def sketch_maxson():
 
         send_data_to_rjn2(
             session_rjn,
-            project_id=session_rjn.custom_dict["url"],
+            project_id=rjn_siteid,
             entity_id=rjn_entityid,
             timestamps=[timestamp_str],
             values=[round(value, 2)]
-        )
+        )"""
 
 # all of this can be mitigated with requests.Session()
 # Used, dameon_runner.py, as of 04 June 2025
@@ -145,4 +141,14 @@ def get_rjn_tokens_and_headers(secrets_dict):
     return rjn, headers_rjn
 
 if __name__ == "__main__":
-    main()
+    import sys
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "default"
+
+    if cmd == "sketch":
+        sketch_maxson()
+    elif cmd == "daemon_runner":
+        sketch_daemon_runner_main()
+    else:
+        print("Usage options: \n"
+        "poetry run python -m projects.eds_to_rjn.scripts.main daemon_runner \n"
+        "poetry run python -m projects.eds_to_rjn.scripts.main sketch")

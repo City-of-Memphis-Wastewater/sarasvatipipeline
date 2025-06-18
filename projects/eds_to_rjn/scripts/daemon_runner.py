@@ -25,20 +25,21 @@ def run_live_cycle():
     session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
     sessions.update({"Maxson":session_maxson})
 
-    queries_dictarray = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
-    queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
-    
+    queries_dictlist = load_query_rows_from_csv_files(queries_manager.get_default_query_file_paths_list())
+    #print(f"queries_dictlist = {queries_dictlist}")
+    queries_defaultdictlist = group_queries_by_api_url(queries_dictlist)
+    #print(f"queries_defaultdictlist = {queries_defaultdictlist}")
     #for key, session in sessions.items():
     key = "Maxson"
     session = sessions[key] 
 
     queries_defaultdict = queries_defaultdictlist.get(key,[])        
     data = collector.collect_live_values(session, queries_defaultdict) # need a way to for the eds_api method refernce to land on the other end
-    print(f"data = {data}")
+    #print(f"data = {data}")
     if len(data)==0:
         print("No data retrieved via collector.collect_live_values(). Skipping storage.store_live_values()")
     else:
-        storage.store_live_values(data, project_manager.get_aggregate_dir()+"/live_data.csv") # project_manager.get_live_data_csv_file
+        storage.store_live_values(data, project_manager.get_aggregate_dir()+"\live_data.csv") # project_manager.get_live_data_csv_file
 
 def run_hourly_cycle(): 
     print("Running hourly cycle...")
@@ -46,8 +47,8 @@ def run_hourly_cycle():
     project_manager = ProjectManager(project_name)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_dict)
-    aggregator.aggregate_and_send(data_file = project_manager.get_aggregate_dir()+"/live_data.csv",
-                                  checkpoint_file = project_manager.get_aggregate_dir()+"/sent_data.csv",
+    aggregator.aggregate_and_send(data_file = project_manager.get_aggregate_dir()+"\live_data.csv",
+                                  checkpoint_file = project_manager.get_aggregate_dir()+"\sent_data.csv",
                                   rjn_base_url=rjn_api.config['url'],
                                   headers_rjn=headers_rjn)
     
@@ -61,16 +62,16 @@ def run_hourly_cycle_manual():
     print("secrets_dict, created.")
     rjn_api, headers_rjn = get_rjn_tokens_and_headers(secrets_dict)
     print("rjn_api & headers_rjn, created.")
-    data_file_manual = str(input("CSV filepath (like /live_data.csv), paste: "))
+    data_file_manual = str(input("CSV filepath (like \live_data.csv), paste: "))
     aggregator.aggregate_and_send(data_file = data_file_manual,
-                                  #checkpoint_file = project_manager.get_aggregate_dir()+"/sent_data.csv",
+                                  #checkpoint_file = project_manager.get_aggregate_dir()+"\sent_data.csv",
                                   checkpoint_file = "",
                                   rjn_base_url=rjn_api.config['url'],
                                   headers_rjn=headers_rjn)
     
 def defunct_setup_schedules():
 
-    print("projects/eds_to_rjn/scripts/daemon_runner.py")
+    print("projects\eds_to_rjn\scripts\daemon_runner.py")
     # Get current time and round it to the next multiple of 5 minutes
     now = datetime.datetime.now()
     minutes_to_next_five = 5 - (now.minute % 5)
@@ -82,7 +83,7 @@ def defunct_setup_schedules():
     schedule.every().hour.at(":00").do(run_hourly_cycle)
 
 def setup_schedules():
-    print("projects/eds_to_rjn/scripts/daemon_runner.py")
+    print("projects\eds_to_rjn\scripts\daemon_runner.py")
     now = datetime.datetime.now()
 
     # Calculate how many minutes to the next 5-minute mark (05, 10, 15, etc.)

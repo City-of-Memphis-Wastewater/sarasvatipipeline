@@ -94,8 +94,7 @@ class EdsClient:
             raise ValueError(f"Expected exactly one point, got {len(points_datas)}")
         else:
             point_data = points_datas[0] # You expect exactly one point usually
-            print(f"point_data = {point_data}")
-    
+            #print(f"point_data = {point_data}")
         return point_data  
     
     def get_tabular_mod(session, req_id, point_list):
@@ -232,8 +231,8 @@ def demo_get_tabular_trend_OvationSuggested():
         sessions.update({"WWTF":session_stiles})
 
     queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
-    queries_dictarray = load_query_rows_from_csv_files(queries_file_path_list)
-    queries_defaultdictlist = group_queries_by_api_url(queries_dictarray)
+    queries_dictlist = load_query_rows_from_csv_files(queries_file_path_list)
+    queries_defaultdictlist = group_queries_by_api_url(queries_dictlist)
     
     for key, session in sessions.items():
         # Discern which queries to use

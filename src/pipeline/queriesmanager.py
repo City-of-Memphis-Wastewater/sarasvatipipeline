@@ -94,14 +94,14 @@ class QueriesManager:
         data[api_id]["timestamps"]["last_attempt"] = now
 
 def load_query_rows_from_csv_files(csv_paths_list):
-    queries_dictarray = []
+    queries_dictlist = []
     for csv_path in csv_paths_list:
         print(f"csv_path = {csv_path}")
         with open(csv_path, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                queries_dictarray.append(row)
-    return queries_dictarray
+                queries_dictlist.append(row)
+    return queries_dictlist
 
 def group_queries_by_api_url(queries_array):
     queries_array_grouped = defaultdict(list)
