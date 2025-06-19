@@ -102,9 +102,10 @@ class ProjectManager:
     
     def get_queries_file_path(self,filename='points.csv'): # default fallback filename
         # Return the full path to the config file
-        #! Migrate this function to the QueryManager class,
-        #if filename is str: # have different behavior is a full path is fed vs just a file name expected in the queries directory
-        return os.path.join(self.get_queries_dir(), filename)    
+        filepath = os.path.join(self.get_queries_dir(), filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Query filepath={filepath} not found. \nPossible reason: You are in the wrong project directory.")
+        return filepath    
     
     def get_timestamp_success_file_path(self):
         # Return the full path to the timestamp file

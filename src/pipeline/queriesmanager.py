@@ -33,7 +33,8 @@ class QueriesManager:
             paths = [self.project_manager.get_queries_file_path(filename)]
         if filename and isinstance(filename,list):
             "Return a multi-csv list"
-            paths = [self.project_manager.get_queries_file_path(filename)]
+            #incorrect
+            paths = [self.project_manager.get_queries_file_path(f) for f in filename]
         else:
             try:
                 default_query_path = os.path.join(
@@ -100,7 +101,6 @@ class QueriesManager:
 def load_query_rows_from_csv_files(csv_paths_list):
     queries_dictlist = []
     for csv_path in csv_paths_list:
-        print(f"csv_path = {csv_path}")
         with open(csv_path, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:

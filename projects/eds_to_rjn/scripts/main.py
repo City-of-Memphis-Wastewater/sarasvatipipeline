@@ -49,6 +49,7 @@ def sketch_maxson():
     project_manager = ProjectManager(project_name)
     queries_manager = QueriesManager(project_manager)
     queries_file_path_list = queries_manager.get_default_query_file_paths_list() # use default identified by the default-queries.toml file
+    logger.debug(f"queries_file_path_list = {queries_file_path_list}")
     queries_dictlist = load_query_rows_from_csv_files(queries_file_path_list)
     queries_defaultdictlist = group_queries_by_api_url(queries_dictlist)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())

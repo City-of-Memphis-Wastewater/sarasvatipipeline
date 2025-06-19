@@ -173,27 +173,6 @@ def create_tabular_request(session, api_url, starttime, endtime, points):
     #print(f"response = {response}")
     return response['id']
 
-def get_query_point_list(csv_path, api_id):
-    print(f"csv_path = {csv_path}")
-    point_list = list()
-    with open(csv_path, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            # Skip empty rows (if all values in the row are empty or None)
-            if not any(row.values()):
-                print("Skipping empty row.")
-                continue
-            #print(f"row = {row}")
-            if row['zd']!=api_id:
-                pass
-                #print(f"api_id {api_id} =! row['zd'] {row['zd']} in the query CSV row.")
-            else:
-                # Convert and validate values
-                point = row["iess"]
-                point_list.append(point)
-                
-    return point_list
-
 def wait_for_request_execution_session(session, api_url, req_id):
     st = time.time()
     while True:
