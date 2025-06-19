@@ -2,9 +2,8 @@
 import schedule, time
 #import logging
 import datetime
-#from ..scripts import collector, storage, aggregator, sanitizer
 from ..code import collector, storage, aggregator, sanitizer
-from src.pipeline.api.eds import login_to_session, get_query_point_list # actually generalized beyond EDS
+from src.pipeline.api.eds import login_to_session # actually generalized beyond EDS
 from .main import get_eds_maxson_token_and_headers, get_rjn_tokens_and_headers
 from src.pipeline.env import SecretsYaml
 from src.pipeline.projectmanager import ProjectManager
