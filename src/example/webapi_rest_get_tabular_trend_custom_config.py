@@ -88,12 +88,12 @@ def get_tabular(session, req_id):
             if chunk['status'] == 'TIMEOUT':
                 raise RuntimeError('timeout')
 
-            if chunk['status'] == 'LAST':
-                return results
-
             for idx, samples in enumerate(chunk['items']):
                 results[idx] += samples
-
+            
+            if chunk['status'] == 'LAST':
+                return results
+            
 def main():
     session = login_to_session()
     req_id = create_tabular_request(session)

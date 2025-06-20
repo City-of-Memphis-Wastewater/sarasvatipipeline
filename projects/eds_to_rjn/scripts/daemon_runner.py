@@ -1,6 +1,6 @@
 #projects/eds_to_rjndaemon_runner.py
 import schedule, time
-#import logging
+import logging
 import datetime
 from ..code import collector, storage, aggregator, sanitizer
 from src.pipeline.api.eds import login_to_session # actually generalized beyond EDS
@@ -11,7 +11,7 @@ from src.pipeline.queriesmanager import QueriesManager
 from src.pipeline.queriesmanager import load_query_rows_from_csv_files, group_queries_by_api_url
 
 def run_live_cycle():
-    print("Running live cycle...")
+    logging.info("Running live cycle...")
     #test_connection_to_internet()  
 
     project_name = 'eds_to_rjn' # project_name = ProjectManager.identify_default_project()

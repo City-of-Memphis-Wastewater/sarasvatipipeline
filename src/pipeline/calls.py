@@ -20,6 +20,7 @@ def test_connection_to_internet():
         sys.exit()
 
 def make_request(url, data=None, params = None, method="POST", headers=None, retries=3, delay=2, timeout=10, verify_ssl=True):
+    """Now defunct, converted to a requests.Session() paradigm."""
     default_headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -84,3 +85,7 @@ def call_ping(url):
     param = "-n" if platform.system().lower() == "windows" else "-c"
     command = ["ping", param, "1", parsed.hostname]
     return subprocess.call(command) == 0  # True if ping succeeds
+
+if __name__ == "__main__":
+    from pipeline.helpers import function_view
+    function_view()

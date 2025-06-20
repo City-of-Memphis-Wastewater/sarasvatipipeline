@@ -57,5 +57,10 @@ def demo_secrets():
     return secrets
 
 if __name__ == "__main__":
-    # call from the root directory using poetry run python -m pipeline.env
+    
+    # call from the root directory using: poetry run python -m pipeline.env
+    
+    #from pipeline.helpers import function_view
+    #function_view()
+
     secrets=demo_secrets()

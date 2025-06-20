@@ -6,7 +6,6 @@ from requests.exceptions import RequestException
 import requests
 import sys
 import time
-import csv
 
 from src.pipeline.calls import make_request, call_ping
 from src.pipeline.env import find_urls
@@ -54,13 +53,11 @@ class EdsClient:
         headers = {'Authorization': f"Bearer {token}"} if token else None
 
         return token, headers
-
-    def get_license(self,api_id:str,headers=None):
-        plant_cfg = self.config[api_id]
-        request_url = plant_cfg['url'] + 'license'
-        response = make_request(url = request_url, headers=headers, method = "GET", data = {})
-        
-        pprint(response.__dict__)
+    
+    @staticmethod
+    def get_license(session,api_url:str):
+        response = session.get(api_url + 'license', json={}, verify=False).json()
+        pprint(response)
         return response
 
     @staticmethod
@@ -106,17 +103,18 @@ class EdsClient:
                 if chunk['status'] == 'TIMEOUT':
                     raise RuntimeError('timeout')
 
+                for idx, samples in enumerate(chunk['items']):
+                    results[idx] += samples
+                    
                 if chunk['status'] == 'LAST':
                     return results
 
-                for idx, samples in enumerate(chunk['items']):
-                    results[idx] += samples
+                
 
-    def get_points_export(self,api_id: str,sid: int=int(),iess:str=str(), starttime :int=int(),endtime:int=int(),shortdesc : str="",headers = None):
+    def get_points_export_(self,api_id: str,iess:str='',headers = None):
         "Success"
         api_url = str(self.config[api_id]["url"])
         zd = api_id
-        iess = ''
         order = 'iess'
         query = '?zd={}&iess={}&order={}'.format(zd, iess, order)
         request_url = api_url + 'points/export' + query
@@ -126,8 +124,21 @@ class EdsClient:
         byte_string = response.content
         decoded_str = byte_string.decode('utf-8')
         return decoded_str
+    
+    @staticmethod
+    def get_points_export(session,iess_filter:str=''):
+        api_url = session.custom_dict["url"]
+        zd = session.custom_dict["zd"]
+        order = 'iess'
+        query = '?zd={}&iess={}&order={}'.format(zd, iess_filter, order)
+        request_url = api_url + 'points/export' + query
+        response = session.get(request_url, json={}, verify=False)
+        #print(f"Status Code: {response.status_code}, Content-Type: {response.headers.get('Content-Type')}, Body: {response.text[:500]}")
+        decoded_str = response.text
+        return decoded_str
 
-    def save_points_export(self,decoded_str, export_file_path):
+    @staticmethod
+    def save_points_export(decoded_str, export_file_path):
         lines = decoded_str.strip().splitlines()
 
         with open(export_file_path, "w", encoding="utf-8") as f:
@@ -188,7 +199,7 @@ def wait_for_request_execution_session(session, api_url, req_id):
 
     print('request [{}] executed in: {:.3f} s\n'.format(req_id, time.time() - st))
 
-def demo_get_tabular_trend_OvationSuggested():
+def demo_get_trabular_trend():
     print("Start: demo_show_points_tabular_trend()")
     # typical opening, for discerning the project, the secrets files, the queries, and preparing for sessions.
     from src.pipeline.projectmanager import ProjectManager
@@ -230,7 +241,8 @@ def demo_get_tabular_trend_OvationSuggested():
         for idx, iess in enumerate(point_list):
             print('\n{} samples:'.format(iess))
             for s in results[idx]:
-                print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
+                #print('{} {} {}'.format(datetime.fromtimestamp(s[0]), s[1], s[2]))
+                print(s)
 
 def demo_eds_save_point_export():
     print("Start demo_eds_save_point_export()")
@@ -239,18 +251,45 @@ def demo_eds_save_point_export():
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
-    key0 = list(secrets_dict.keys())[0]
-    key00 = list(secrets_dict[key0].keys())[0]
-    eds = EdsClient(secrets_dict[key0])
-    token_eds, headers_eds = eds.get_token_and_headers(zd=key00)
-    decoded_str = eds.get_points_export(api_id = key00,headers = headers_eds)
-    export_file_path = project_manager.get_exports_file_path(filename = 'export_eds_points_all.txt')
-    eds.save_points_export(decoded_str, export_file_path = export_file_path)
-    print(f"Export file will be saved to: {export_file_path}")
+    sessions = {}
+
+    session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
+    session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
+    sessions.update({"Maxson":session_maxson})
+
+    decoded_str = EdsClient.get_points_export(session_maxson)
+    export_file_path = project_manager.get_exports_file_path(filename = 'export_eds_points_neo.txt')
+    EdsClient.save_points_export(decoded_str, export_file_path = export_file_path)
+    print(f"Export file saved to: \n{export_file_path}")
+
+def demo_get_license():
+    print("\ndemo_get_license()")
+    # typical opening, for discerning the project, the secrets files, the queries, and preparing for sessions.
+    from src.pipeline.projectmanager import ProjectManager
+    from src.pipeline.env import SecretsYaml
+
+    project_name = ProjectManager.identify_default_project()
+    project_manager = ProjectManager(project_name)
+    secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
+    sessions = {}
+
+    session_maxson = login_to_session(api_url = secrets_dict["eds_apis"]["Maxson"]["url"] ,username = secrets_dict["eds_apis"]["Maxson"]["username"], password = secrets_dict["eds_apis"]["Maxson"]["password"])
+    session_maxson.custom_dict = secrets_dict["eds_apis"]["Maxson"]
+    sessions.update({"Maxson":session_maxson})
+    
+    response = EdsClient.get_license(session_maxson, api_url = session_maxson.custom_dict["url"])
+
+    if False:
+        session_stiles = login_to_session(api_url = secrets_dict["eds_apis"]["WWTF"]["url"] ,username = secrets_dict["eds_apis"]["WWTF"]["username"], password = secrets_dict["eds_apis"]["WWTF"]["password"])
+        session_stiles.custom_dict = secrets_dict["eds_apis"]["WWTF"]
+        sessions.update({"WWTF":session_stiles})
+
+        response = EdsClient.get_license(session_stiles, api_url = session_stiles.custom_dict["url"])
 
 def ping():
     from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
+
     project_name = ProjectManager.identify_default_project()
     project_manager = ProjectManager(project_name)
     secrets_dict = SecretsYaml.load_config(secrets_file_path = project_manager.get_configs_secrets_file_path())
@@ -267,12 +306,15 @@ if __name__ == "__main__":
     if cmd == "demo-points-export":
         demo_eds_save_point_export()
     elif cmd == "demo-trend":
-        demo_get_tabular_trend_OvationSuggested()
+        demo_get_trabular_trend()
     elif cmd == "ping":
         ping()
+    elif cmd == "license":
+        demo_get_license()
     else:
         print("Usage options: \n" 
         "poetry run python -m pipeline.api.eds demo-points-export \n"  
         "poetry run python -m pipeline.api.eds demo-trend \n"
-        "poetry run python -m pipeline.api.eds ping")
+        "poetry run python -m pipeline.api.eds ping \n"
+        "poetry run python -m pipeline.api.eds license")
     

@@ -100,7 +100,7 @@ class ProjectManager:
     def get_queries_dir(self):
         return os.path.join(self.get_project_dir(), self.QUERIES_DIR_NAME)
     
-    def get_queries_file_path(self,filename='points.csv'): # default fallback filename
+    def get_queries_file_path(self,filename): #
         # Return the full path to the config file
         filepath = os.path.join(self.get_queries_dir(), filename)
         if not os.path.exists(filepath):
