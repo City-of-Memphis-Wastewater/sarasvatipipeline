@@ -19,40 +19,6 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 class EdsClient:
     def __init__(self,config):
         self.config = config
-
-    def get_token_and_headers(self,zd="Maxson"):
-        logging.info("EdsClient.get_token_and_headers()")
-
-        try:
-            plant_cfg = self.config[zd]
-        except KeyError:
-            logging.error(f"Unknown zd '{zd}'")
-            raise ValueError(f"Unknown zd '{zd}'")
-
-        request_url = plant_cfg['url'] + 'login'
-        logging.info(f"Requesting login at {request_url}")
-        #print(f"request_url = {request_url}")
-        data = {
-            'username': plant_cfg['username'],
-            'password': plant_cfg['password'],
-            'type': 'rest client'
-        }
-        try:
-            response = make_request(url = request_url, data=data, method="POST")
-            if response is None:
-                logging.warning("Request failed—received NoneType response. Skipping token retrieval.")
-                return None, None  # Prevent AttributeError
-            response.raise_for_status()  # Ensure response is valid
-        except (RequestException, HTTPError) as e:
-            logging.warning("Skipping token retrieval due to connection error.")
-            logging.warning("Your base URL might not be correctly set in secrets.yaml.")
-            #logging.debug(e)  # Only logs full traceback if logging level is set to DEBUG
-            return None, None
-        
-        token = response.json()['sessionId']
-        headers = {'Authorization': f"Bearer {token}"} if token else None
-
-        return token, headers
     
     @staticmethod
     def get_license(session,api_url:str):
@@ -108,22 +74,6 @@ class EdsClient:
                     
                 if chunk['status'] == 'LAST':
                     return results
-
-                
-
-    def get_points_export_(self,api_id: str,iess:str='',headers = None):
-        "Success"
-        api_url = str(self.config[api_id]["url"])
-        zd = api_id
-        order = 'iess'
-        query = '?zd={}&iess={}&order={}'.format(zd, iess, order)
-        request_url = api_url + 'points/export' + query
-        response = make_request(url = request_url, headers=headers, method="GET")
-        if response is None:
-            sys.exit() # this is better than overwriting a previous exprt with a blank export
-        byte_string = response.content
-        decoded_str = byte_string.decode('utf-8')
-        return decoded_str
     
     @staticmethod
     def get_points_export(session,iess_filter:str=''):

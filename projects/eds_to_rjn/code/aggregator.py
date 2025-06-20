@@ -5,9 +5,9 @@ from collections import defaultdict
 import os
 from pprint import pprint
 
-from src.pipeline.api.rjn import send_data_to_rjn
+from src.pipeline.api.rjn import send_data_to_rjn2
 
-def aggregate_and_send(data_file, checkpoint_file, rjn_base_url, headers_rjn):
+def aggregate_and_send(session_rjn, data_file, checkpoint_file, rjn_base_url, headers_rjn):
 
     # Prepare single timestamp (top of the hour UTC)
     #timestamp = datetime.datetime.now(datetime.timezone.utc).replace(minute=0, second=0, microsecond=0)
@@ -59,6 +59,7 @@ def aggregate_and_send(data_file, checkpoint_file, rjn_base_url, headers_rjn):
 
         if timestamps:
             print(f"Attempting to send {len(timestamps)} values to RJN for entity {entityid} at site {siteid}")
+            '''
             send_data_to_rjn(
                 base_url=rjn_base_url,
                 project_id=siteid,
@@ -67,6 +68,15 @@ def aggregate_and_send(data_file, checkpoint_file, rjn_base_url, headers_rjn):
                 timestamps=timestamps,
                 values=values
             )
+            '''
+            send_data_to_rjn2(
+            session_rjn,
+            base_url = session_rjn.custom_dict["url"],
+            project_id=row["rjn_siteid"],
+            entity_id=row["rjn_entityid"],
+            timestamps=timestamps,
+            values=[round(row["value"], 2)]
+        )
 
             # Record successful sends
             if os.path.exists(checkpoint_file):

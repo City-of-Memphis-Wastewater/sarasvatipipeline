@@ -91,6 +91,51 @@ def send_data_to_rjn(base_url:str, project_id:str, entity_id:int, headers:dict, 
         if response is not None:# and response.status_code != 500:
             print(f"Response content: {response.text}")  # Print error response
         
+def send_data_to_rjn2(session, base_url:str, project_id:str, entity_id:int, timestamps, values):
+    if timestamps is None:
+        raise ValueError("timestamps cannot be None")
+    if values is None:
+        raise ValueError("values cannot be None")
+    if not isinstance(timestamps, list):
+        timestamps = [timestamps]
+    if not isinstance(values, list):
+        values = [values]
+    # Check for matching lengths of timestamps and values
+    if len(timestamps) != len(values):
+        raise ValueError(f"timestamps and values must have the same length: {len(timestamps)} vs {len(values)}")
+
+
+    url = f"{base_url}/projects/{project_id}/entities/{entity_id}/data"
+    params = {
+        "interval": 300,
+        "import_mode": "OverwriteExistingData",
+        "incoming_time": "DST"
+    }
+    body = {
+    "comments": "Imported from EDS.",
+    "data": dict(zip(timestamps, values))  # Works for single or multiple entries
+    }
+
+    response = None
+    try:
+        #response = make_request(url=url, headers=headers, params = params, method="POST", data=body)
+        response = session.post(url=url, json= body, params = params)
+        print(f"response.json() = {response.json()}")
+        
+        if response is None:
+            print("Response = None, job cancelled")
+        else:
+            response.raise_for_status()
+            #print(f"Sent {timestamps} -> {values} to entity {entity_id} (HTTP {response.status_code})")
+            print(f"Sent timestamps and values to entity {entity_id} (HTTP {response.status_code})")
+    except ConnectionError as e:
+        print("Skipping RjnClient.send_data_to_rjn() due to connection error")
+        print(e)
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending data to RJN: {e}")
+        if response is not None:# and response.status_code != 500:
+            print(f"Response content: {response.text}")  # Print error response
+
 def ping():
     from src.pipeline.env import SecretsYaml
     from src.pipeline.projectmanager import ProjectManager
